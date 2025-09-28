@@ -211,3 +211,6 @@ models
 
 # Data
 data
+
+# Outputs
+output/*.png
