@@ -1,13 +1,13 @@
 """
-Helper functions for Neural Networks Project - Multi-Layer Perceptron
+Funciones auxiliares para el Proyecto de Redes Neuronales - Perceptrón Multicapa
 Proyecto Redes Neuronales 2025-II
 Universidad Del Valle
 
-This module contains reusable utility functions for:
-- Data loading and preprocessing
-- Model training and evaluation
-- Results saving and visualization
-- Experiment tracking
+Este módulo contiene funciones utilitarias reutilizables para:
+- Carga y preprocesamiento de datos
+- Entrenamiento y evaluación de modelos
+- Guardado de resultados y visualización
+- Seguimiento de experimentos
 """
 
 import os
@@ -31,14 +31,14 @@ plt.style.use('default')
 sns.set_palette("husl")
 
 class DataLoader:
-    """Handles data loading and preprocessing for the neural network models."""
+    """Maneja la carga y preprocesamiento de datos para los modelos de redes neuronales."""
     
     def __init__(self, data_dir: str = "data"):
         """
-        Initialize DataLoader with data directory path.
+        Inicializa DataLoader con la ruta del directorio de datos.
         
         Args:
-            data_dir (str): Path to the directory containing CSV files
+            data_dir (str): Ruta al directorio que contiene los archivos CSV
         """
         self.data_dir = data_dir
         self.tokenizer = None
@@ -46,31 +46,31 @@ class DataLoader:
         
     def load_csv_data(self, file_name: str) -> pd.DataFrame:
         """
-        Load CSV file from data directory.
+        Carga archivo CSV desde el directorio de datos.
         
         Args:
-            file_name (str): Name of the CSV file
+            file_name (str): Nombre del archivo CSV
             
         Returns:
-            pd.DataFrame: Loaded data
+            pd.DataFrame: Datos cargados
         """
         file_path = os.path.join(self.data_dir, file_name)
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Data file not found: {file_path}")
+            raise FileNotFoundError(f"Archivo de datos no encontrado: {file_path}")
         
         try:
             df = pd.read_csv(file_path)
-            print(f"Loaded {len(df)} samples from {file_name}")
+            print(f"Datos cargados exitosamente: {file_name}")
             return df
         except Exception as e:
-            raise Exception(f"Error loading {file_name}: {str(e)}")
+            raise Exception(f"Error cargando {file_name}: {str(e)}")
     
     def load_all_data(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
-        Load train, validation, and test datasets.
+        Carga los conjuntos de datos de entrenamiento, validación y prueba.
         
         Returns:
-            Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Train, validation, test data
+            Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Datos de entrenamiento, validación y prueba
         """
         train_df = self.load_csv_data("train.csv")
         val_df = self.load_csv_data("validation.csv") 
@@ -84,80 +84,79 @@ class DataLoader:
                            test_df: pd.DataFrame,
                            text_column: str = 'review_body',
                            target_column: str = 'stars',
-                           max_words: int = 10000,
-                           max_length: int = 100) -> Dict:
+                           max_words: int = None,
+                           max_length: int = None) -> Dict:
         """
-        Preprocess text data for neural network training.
+        Preprocesa datos de texto para el entrenamiento de redes neuronales.
         
         Args:
-            train_df, val_df, test_df: DataFrames with text data
-            text_column (str): Name of text column
-            target_column (str): Name of target column
-            max_words (int): Maximum vocabulary size
-            max_length (int): Maximum sequence length
+            train_df, val_df, test_df: DataFrames con datos de texto
+            text_column (str): Nombre de la columna de texto
+            target_column (str): Nombre de la columna objetivo
+            max_words (int): Tamaño máximo del vocabulario
+            max_length (int): Longitud máxima de secuencia
             
         Returns:
-            Dict: Preprocessed data with X_train, y_train, etc.
+            Dict: Datos preprocesados con X_train, y_train, etc.
         """
-        print("Preprocessing text data...")
+        print("Preprocesando datos de texto...")
         
-        # Combine all text for tokenizer fitting
+        # Combinar todo el texto para ajustar el tokenizer
         all_texts = pd.concat([
             train_df[text_column], 
             val_df[text_column], 
             test_df[text_column]
         ]).fillna("")
         
-        # Initialize and fit tokenizer
+        # Inicializar y ajustar tokenizer
         self.tokenizer = Tokenizer(num_words=max_words, oov_token="<OOV>")
         self.tokenizer.fit_on_texts(all_texts)
         
-        # Convert texts to sequences
+        # Convertir textos a secuencias
         X_train = self.tokenizer.texts_to_sequences(train_df[text_column].fillna(""))
         X_val = self.tokenizer.texts_to_sequences(val_df[text_column].fillna(""))
         X_test = self.tokenizer.texts_to_sequences(test_df[text_column].fillna(""))
         
-        # Pad sequences
+        # Aplicar padding a las secuencias
         X_train = pad_sequences(X_train, maxlen=max_length, padding='post', truncating='post')
         X_val = pad_sequences(X_val, maxlen=max_length, padding='post', truncating='post')
         X_test = pad_sequences(X_test, maxlen=max_length, padding='post', truncating='post')
         
-        # Process target variable
+        # Procesar variable objetivo
         y_train = self.label_encoder.fit_transform(train_df[target_column])
         y_val = self.label_encoder.transform(val_df[target_column])
         y_test = self.label_encoder.transform(test_df[target_column])
         
-        # Convert to categorical for multi-class classification
+        # Convertir a categórico para clasificación multiclase
         num_classes = len(self.label_encoder.classes_)
         y_train_cat = to_categorical(y_train, num_classes)
         y_val_cat = to_categorical(y_val, num_classes)
         y_test_cat = to_categorical(y_test, num_classes)
         
-        print(f"Vocabulary size: {len(self.tokenizer.word_index)}")
-        print(f"Number of classes: {num_classes}")
-        print(f"Sequence length: {max_length}")
-        print(f"Training samples: {X_train.shape[0]}")
-        print(f"Validation samples: {X_val.shape[0]}")
-        print(f"Test samples: {X_test.shape[0]}")
+        print(f"Tamaño del vocabulario: {len(self.tokenizer.word_index)}")
+        print(f"Número de clases: {num_classes}")
+        print(f"Longitud de secuencia: {max_length}")
+        print(f"Muestras de entrenamiento: {X_train.shape[0]}")
+        print(f"Muestras de validación: {X_val.shape[0]}")
+        print(f"Muestras de prueba: {X_test.shape[0]}")
         
         return {
             'X_train': X_train, 'y_train': y_train_cat,
             'X_val': X_val, 'y_val': y_val_cat, 
             'X_test': X_test, 'y_test': y_test_cat,
             'num_classes': num_classes,
-            'vocab_size': len(self.tokenizer.word_index) + 1,
-            'max_length': max_length
+            'vocab_size': len(self.tokenizer.word_index) + 1
         }
 
 class ModelTrainer:
-    """Handles model training with callbacks and monitoring."""
+    """Maneja el entrenamiento de modelos con callbacks y monitoreo."""
     
     def __init__(self, model_dir: str = "models"):
         """
-        Initialize ModelTrainer.
+        Inicializa ModelTrainer.
         
         Args:
-            model_dir (str): Directory to save trained models
+            model_dir (str): Directorio para guardar modelos entrenados
         """
         self.model_dir = model_dir
         os.makedirs(model_dir, exist_ok=True)
@@ -173,24 +172,24 @@ class ModelTrainer:
                     patience: int = 10,
                     model_name: str = "mlp_model") -> Dict:
         """
-        Train a Keras model with early stopping.
+        Entrena un modelo de Keras con early stopping.
         
         Args:
-            model: Compiled Keras model
-            X_train, y_train: Training data
-            X_val, y_val: Validation data
-            epochs (int): Maximum number of epochs
-            batch_size (int): Batch size for training
-            patience (int): Early stopping patience
-            model_name (str): Name for saving the model
+            model: Modelo de Keras compilado
+            X_train, y_train: Datos de entrenamiento
+            X_val, y_val: Datos de validación
+            epochs (int): Número máximo de épocas
+            batch_size (int): Tamaño del batch para entrenamiento
+            patience (int): Paciencia para early stopping
+            model_name (str): Nombre para guardar el modelo
             
         Returns:
-            Dict: Training history and results
+            Dict: Historial y resultados del entrenamiento
         """
-        print(f"Training {model_name}...")
-        print(f"Model parameters: {model.count_params():,}")
+        print(f"Entrenando {model_name}...")
+        print(f"Parámetros del modelo: {model.count_params():,}")
         
-        # Define callbacks
+        # Definir callbacks
         callbacks = [
             tf.keras.callbacks.EarlyStopping(
                 monitor='val_loss',
@@ -207,7 +206,7 @@ class ModelTrainer:
             )
         ]
         
-        # Train the model
+        # Entrenar el modelo
         start_time = datetime.now()
         history = model.fit(
             X_train, y_train,
@@ -220,10 +219,10 @@ class ModelTrainer:
         
         training_time = (datetime.now() - start_time).total_seconds()
         
-        # Save the trained model
+        # Guardar el modelo entrenado
         model_path = os.path.join(self.model_dir, f"{model_name}.h5")
         model.save(model_path)
-        print(f"Model saved to: {model_path}")
+        print(f"Modelo guardado en: {model_path}")
         
         return {
             'history': history.history,
@@ -237,51 +236,71 @@ class ModelTrainer:
         }
 
 class ResultsManager:
-    """Handles saving and loading experiment results."""
+    """Maneja el guardado y carga de resultados de experimentos."""
     
     def __init__(self, output_dir: str = "output"):
         """
-        Initialize ResultsManager.
+        Inicializa ResultsManager.
         
         Args:
-            output_dir (str): Directory to save experiment results
+            output_dir (str): Directorio para guardar resultados de experimentos
         """
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
         self.results_file = os.path.join(output_dir, "experiment_history.json")
     
-    def save_experiment_results(self, 
-                              experiment_data: Dict,
-                              experiment_id: Optional[int] = None) -> int:
+    def save_experiment(self, experiment_data: Dict, experiment_name: str) -> str:
         """
-        Save experiment results to JSON file.
+        Guarda resultados del experimento en archivo JSON.
         
         Args:
-            experiment_data (Dict): Complete experiment data
-            experiment_id (int, optional): Specific experiment ID
+            experiment_data (Dict): Diccionario conteniendo resultados del experimento
+            experiment_name (str): Nombre del experimento
             
         Returns:
-            int: Experiment ID assigned
+            str: Ruta al archivo guardado
         """
-        # Load existing history or create new
+        # Añadir timestamp al experimento
+        experiment_data['timestamp'] = datetime.now().isoformat()
+        experiment_data['experiment_name'] = experiment_name
+        
+        # Cargar historial existente
         history_data = self.load_experiment_history()
         
-        # Assign experiment ID
-        if experiment_id is None:
-            existing_ids = [exp.get('experiment_id', 0) for exp in history_data.get('experiments', [])]
-            experiment_id = max(existing_ids) + 1 if existing_ids else 1
+        # Añadir nuevo experimento
+        history_data["experiments"].append(experiment_data)
         
-        experiment_data['experiment_id'] = experiment_id
+        # Guardar historial actualizado
+        with open(self.results_file, 'w', encoding='utf-8') as f:
+            json.dump(history_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"Resultados del experimento guardados en: {self.results_file}")
+        return self.results_file
+    
+    def save_experiment_results(self, experiment_data: Dict) -> int:
+        """
+        Guarda resultados del experimento y retorna el ID del experimento.
+        
+        Args:
+            experiment_data (Dict): Diccionario conteniendo resultados del experimento
+            
+        Returns:
+            int: ID del experimento guardado
+        """
+        # Añadir timestamp al experimento
         experiment_data['timestamp'] = datetime.now().isoformat()
         
-        # Add to history
-        if 'experiments' not in history_data:
-            history_data['experiments'] = []
+        # Cargar historial existente
+        history_data = self.load_experiment_history()
         
-        history_data['experiments'].append(experiment_data)
-        history_data['last_updated'] = datetime.now().isoformat()
+        # Generar ID del experimento
+        experiment_id = len(history_data["experiments"]) + 1
+        experiment_data['experiment_id'] = experiment_id
         
-        # Save to file
+        # Añadir nuevo experimento
+        history_data["experiments"].append(experiment_data)
+        
+        # Guardar historial actualizado
         with open(self.results_file, 'w', encoding='utf-8') as f:
             json.dump(history_data, f, indent=2, ensure_ascii=False)
         
@@ -290,10 +309,10 @@ class ResultsManager:
     
     def load_experiment_history(self) -> Dict:
         """
-        Load experiment history from JSON file.
+        Carga historial de experimentos desde archivo JSON.
         
         Returns:
-            Dict: Complete experiment history
+            Dict: Historial completo de experimentos
         """
         if not os.path.exists(self.results_file):
             return {"experiments": [], "created": datetime.now().isoformat()}
@@ -302,23 +321,23 @@ class ResultsManager:
             with open(self.results_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading experiment history: {e}")
+            print(f"Error cargando historial de experimentos: {e}")
             return {"experiments": [], "created": datetime.now().isoformat()}
     
     def display_experiment_history(self):
-        """Display formatted experiment history."""
+        """Muestra historial de experimentos formateado."""
         history_data = self.load_experiment_history()
         experiments = history_data.get("experiments", [])
         
         if not experiments:
-            print("No experiments found in history.")
+            print("No se encontraron experimentos en el historial.")
             return
         
-        print(f"\nEXPERIMENT HISTORY ({len(experiments)} experiments)")
+        print(f"\nHISTORIAL DE EXPERIMENTOS ({len(experiments)} experimentos)")
         print("=" * 100)
         
         # Summary table with language column
-        print(f"\n{'ID':<3} {'Model':<12} {'Lang':<6} {'Accuracy':<10} {'Loss':<10} {'Epochs':<8} {'Time (s)':<10} {'Samples':<10}")
+        print(f"\n{'ID':<3} {'Modelo':<12} {'Lang':<6} {'Precisión':<10} {'Pérdida':<10} {'Épocas':<8} {'Tiempo (s)':<10} {'Muestras':<10}")
         print("-" * 95)
         
         for exp in experiments:
@@ -371,38 +390,38 @@ class ResultsManager:
             print(f"\nOVERALL BEST: ID #{overall_best.get('experiment_id')} ({best_lang}) - Accuracy: {best_accuracy:.4f}")
 
 class Visualizer:
-    """Handles visualization of training results and model performance."""
+    """Maneja la visualización de resultados de entrenamiento y rendimiento del modelo."""
     
     @staticmethod
     def plot_training_history(history: Dict, 
                             model_name: str = "Model",
                             save_path: Optional[str] = None):
         """
-        Plot training and validation metrics.
+        Grafica métricas de entrenamiento y validación.
         
         Args:
-            history (Dict): Training history from Keras
-            model_name (str): Name for plot title
-            save_path (str, optional): Path to save the plot
+            history (Dict): Historial de entrenamiento de Keras
+            model_name (str): Nombre para el título del gráfico
+            save_path (str, optional): Ruta para guardar el gráfico
         """
         fig, axes = plt.subplots(1, 2, figsize=(15, 5))
         
-        # Plot accuracy
+        # Graficar precisión
         if 'accuracy' in history and 'val_accuracy' in history:
-            axes[0].plot(history['accuracy'], label='Training Accuracy', linewidth=2)
-            axes[0].plot(history['val_accuracy'], label='Validation Accuracy', linewidth=2)
-            axes[0].set_title(f'{model_name} - Accuracy')
-            axes[0].set_xlabel('Epoch')
-            axes[0].set_ylabel('Accuracy')
+            axes[0].plot(history['accuracy'], label='Precisión Entrenamiento', linewidth=2)
+            axes[0].plot(history['val_accuracy'], label='Precisión Validación', linewidth=2)
+            axes[0].set_title(f'{model_name} - Precisión')
+            axes[0].set_xlabel('Época')
+            axes[0].set_ylabel('Precisión')
             axes[0].legend()
             axes[0].grid(True, alpha=0.3)
         
-        # Plot loss
-        axes[1].plot(history['loss'], label='Training Loss', linewidth=2)
-        axes[1].plot(history['val_loss'], label='Validation Loss', linewidth=2)
-        axes[1].set_title(f'{model_name} - Loss')
-        axes[1].set_xlabel('Epoch')
-        axes[1].set_ylabel('Loss')
+        # Graficar pérdida
+        axes[1].plot(history['loss'], label='Pérdida Entrenamiento', linewidth=2)
+        axes[1].plot(history['val_loss'], label='Pérdida Validación', linewidth=2)
+        axes[1].set_title(f'{model_name} - Pérdida')
+        axes[1].set_xlabel('Época')
+        axes[1].set_ylabel('Pérdida')
         axes[1].legend()
         axes[1].grid(True, alpha=0.3)
         
@@ -410,7 +429,7 @@ class Visualizer:
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"Training history plot saved to: {save_path}")
+            print(f"Gráfico de historial de entrenamiento guardado en: {save_path}")
         
         plt.show()
     
@@ -421,27 +440,27 @@ class Visualizer:
                             model_name: str = "Model",
                             save_path: Optional[str] = None):
         """
-        Plot confusion matrix.
+        Grafica matriz de confusión.
         
         Args:
-            y_true (np.ndarray): True labels
-            y_pred (np.ndarray): Predicted labels  
-            class_names (List[str]): Names of classes
-            model_name (str): Name for plot title
-            save_path (str, optional): Path to save the plot
+            y_true (np.ndarray): Etiquetas verdaderas
+            y_pred (np.ndarray): Etiquetas predichas  
+            class_names (List[str]): Nombres de las clases
+            model_name (str): Nombre para el título del gráfico
+            save_path (str, optional): Ruta para guardar el gráfico
         """
         cm = confusion_matrix(y_true, y_pred)
         
         plt.figure(figsize=(8, 6))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                    xticklabels=class_names, yticklabels=class_names)
-        plt.title(f'{model_name} - Confusion Matrix')
-        plt.xlabel('Predicted Label')
-        plt.ylabel('True Label')
+        plt.title(f'{model_name} - Matriz de Confusión')
+        plt.xlabel('Etiqueta Predicha')
+        plt.ylabel('Etiqueta Verdadera')
         
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
-            print(f"Confusion matrix saved to: {save_path}")
+            print(f"Matriz de confusión guardada en: {save_path}")
         
         plt.show()
 
@@ -450,35 +469,35 @@ def evaluate_model(model: tf.keras.Model,
                   y_test: np.ndarray,
                   class_names: List[str] = None) -> Dict:
     """
-    Evaluate model performance on test data.
+    Evalúa el rendimiento del modelo en datos de prueba.
     
     Args:
-        model: Trained Keras model
-        X_test, y_test: Test data
-        class_names: Names of classes for classification report
+        model: Modelo de Keras entrenado
+        X_test, y_test: Datos de prueba
+        class_names: Nombres de clases para el reporte de clasificación
         
     Returns:
-        Dict: Evaluation metrics
+        Dict: Métricas de evaluación
     """
-    print("Evaluating model on test data...")
+    print("Evaluando modelo en datos de prueba...")
     
-    # Get predictions
+    # Obtener predicciones
     predictions = model.predict(X_test)
     y_pred = np.argmax(predictions, axis=1)
     y_true = np.argmax(y_test, axis=1) if y_test.ndim > 1 else y_test
     
-    # Calculate metrics
+    # Calcular métricas
     test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
     
-    # Classification report
+    # Reporte de clasificación
     if class_names is None:
-        class_names = [f"Class_{i}" for i in range(len(np.unique(y_true)))]
+        class_names = [f"Clase_{i}" for i in range(len(np.unique(y_true)))]
     
     report = classification_report(y_true, y_pred, target_names=class_names, output_dict=True)
     
-    print(f"Test Accuracy: {test_accuracy:.4f}")
-    print(f"Test Loss: {test_loss:.4f}")
-    print("\nClassification Report:")
+    print(f"Precisión de Prueba: {test_accuracy:.4f}")
+    print(f"Pérdida de Prueba: {test_loss:.4f}")
+    print("\nReporte de Clasificación:")
     print(classification_report(y_true, y_pred, target_names=class_names))
     
     return {
@@ -490,7 +509,7 @@ def evaluate_model(model: tf.keras.Model,
     }
 
 def get_gpu_info():
-    """Get GPU information for experiment tracking."""
+    """Obtiene información de GPU para seguimiento de experimentos."""
     try:
         gpus = tf.config.list_physical_devices('GPU')
         if gpus:
@@ -505,28 +524,28 @@ def get_gpu_info():
     except Exception as e:
         return {'gpu_available': False, 'error': str(e)}
 
-# Utility function for experiment setup
+# Función de utilidad para configuración de experimentos
 def setup_experiment_environment(seed: int = 42):
     """
-    Setup reproducible environment for experiments.
+    Configura entorno reproducible para experimentos.
     
     Args:
-        seed (int): Random seed for reproducibility
+        seed (int): Semilla aleatoria para reproducibilidad
     """
-    # Set seeds for reproducibility
+    # Establecer semillas para reproducibilidad
     np.random.seed(seed)
     tf.random.set_seed(seed)
     
-    # Configure GPU if available
+    # Configurar GPU si está disponible
     gpus = tf.config.list_physical_devices('GPU')
     if gpus:
         try:
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            print(f"GPU configured: {len(gpus)} GPU(s) available")
+            print(f"GPU configurada: {len(gpus)} GPU(s) disponibles")
         except RuntimeError as e:
-            print(f"GPU configuration error: {e}")
+            print(f"Error de configuración GPU: {e}")
     else:
-        print("No GPU available, using CPU")
+        print("No hay GPU disponible, usando CPU")
     
     return get_gpu_info()
