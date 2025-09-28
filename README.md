@@ -23,6 +23,7 @@ ProjectNeunoralNets/
 ## Instalación y Uso
 
 ### 1. Instalar dependencias
+- Python 3.10(recomendado usar Conda para el versionamiento)
 ```bash
 pip install -r requirements.txt
 ```
