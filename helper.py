@@ -19,7 +19,9 @@ import seaborn as sns
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Optional
 from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import classification_report, confusion_matrix
+from scipy.sparse import csr_matrix
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -41,6 +43,7 @@ class DataLoader:
         """
         self.data_dir = data_dir
         self.tokenizer = None
+        self.vectorizer = None
         self.label_encoder = LabelEncoder()
         
     def load_csv_data(self, file_name: str) -> pd.DataFrame:
@@ -77,7 +80,7 @@ class DataLoader:
         
         return train_df, val_df, test_df
     
-    def preprocess_text_data(self, 
+    def preprocess_text_data_embedding(self, 
                            train_df: pd.DataFrame, 
                            val_df: pd.DataFrame, 
                            test_df: pd.DataFrame,
@@ -88,7 +91,10 @@ class DataLoader:
                            max_length: int = None,
                            use_title_and_body: bool = False) -> Dict:
         """
-        Preprocesa datos de texto para el entrenamiento de redes neuronales.
+        Preprocesa datos de texto para el entrenamiento de redes neuronales usando embeddings.
+        
+        Esta función utiliza Keras Tokenizer con padding para crear secuencias numéricas
+        que pueden ser procesadas por capas de embedding en redes neuronales.
         
         Args:
             train_df, val_df, test_df: DataFrames con datos de texto
@@ -100,7 +106,7 @@ class DataLoader:
             use_title_and_body (bool): Si True, combina título y cuerpo
             
         Returns:
-            Dict: Datos preprocesados con X_train, y_train, etc.
+            Dict: Datos preprocesados con X_train, y_train, etc. (X_* son arrays densos)
         """
         print("Preprocesando datos de texto...")
         
@@ -163,6 +169,140 @@ class DataLoader:
             'num_classes': num_classes,
             'vocab_size': len(self.tokenizer.word_index) + 1
         }
+
+    def preprocess_text_data_bow(self, 
+                               train_df: pd.DataFrame, 
+                               val_df: pd.DataFrame, 
+                               test_df: pd.DataFrame,
+                               text_column: str = 'review_body',
+                               title_column: str = None,
+                               target_column: str = 'stars',
+                               max_features: int = 5000,
+                               min_df: int = 3,
+                               max_df: float = 0.85,
+                               use_tfidf: bool = True,
+                               use_title_and_body: bool = False) -> Dict:
+        """
+        Preprocesa datos de texto usando BoW/TF-IDF optimizado con matrices dispersas.
+        
+        Esta función implementa una alternativa optimizada en memoria al enfoque de embedding,
+        usando TF-IDF con matrices dispersas para reducir significativamente el uso de memoria.
+        
+        Optimizaciones implementadas:
+        - Vocabulario reducido (5000 características por defecto vs 10000+ en embedding)
+        - Matrices dispersas (ahorro de 80-90% de memoria)
+        - Filtrado de palabras raras (min_df) y comunes (max_df)
+        - TF-IDF para mejor representación semántica
+        - Bigramas para capturar contexto local
+        
+        Args:
+            train_df, val_df, test_df: DataFrames con datos de texto
+            text_column (str): Nombre de la columna de texto (cuerpo)
+            title_column (str): Nombre de la columna de título (opcional)
+            target_column (str): Nombre de la columna objetivo
+            max_features (int): Número máximo de características (5000 por defecto para optimización)
+            min_df (int): Frecuencia mínima de documento para incluir término
+            max_df (float): Frecuencia máxima de documento (ratio) para filtrar términos comunes
+            use_tfidf (bool): Si True usa TF-IDF, si False usa conteos simples
+            use_title_and_body (bool): Si True, combina título y cuerpo
+            
+        Returns:
+            Dict: Datos preprocesados con X_train, y_train, etc. (X_* son matrices dispersas)
+        """
+        print("Preprocesando datos de texto con BoW/TF-IDF optimizado...")
+        print(f"Configuración: max_features={max_features}, min_df={min_df}, max_df={max_df}")
+        print(f"Método: {'TF-IDF' if use_tfidf else 'Bag of Words'}")
+        
+        def combine_title_and_body(df, text_col, title_col, use_combined):
+            """Combina título y cuerpo de texto si está habilitado."""
+            if use_combined and title_col and title_col in df.columns:
+                # Combinar título y cuerpo con un separador
+                combined = (df[title_col].fillna("").astype(str) + " " + 
+                           df[text_col].fillna("").astype(str))
+                print(f"Combinando {title_col} + {text_col}")
+                return combined
+            else:
+                print(f"Usando solo {text_col}")
+                return df[text_col].fillna("")
+        
+        # Combinar texto para cada conjunto
+        train_combined = combine_title_and_body(train_df, text_column, title_column, use_title_and_body)
+        val_combined = combine_title_and_body(val_df, text_column, title_column, use_title_and_body)
+        test_combined = combine_title_and_body(test_df, text_column, title_column, use_title_and_body)
+        
+        # Inicializar vectorizador TF-IDF optimizado
+        if use_tfidf:
+            self.vectorizer = TfidfVectorizer(
+                max_features=max_features,
+                min_df=min_df,
+                max_df=max_df,
+                stop_words='english',  # Filtrar palabras comunes en inglés
+                lowercase=True,
+                strip_accents='unicode',
+                ngram_range=(1, 2)  # Incluir bigramas para mejor representación
+            )
+        else:
+            from sklearn.feature_extraction.text import CountVectorizer
+            self.vectorizer = CountVectorizer(
+                max_features=max_features,
+                min_df=min_df,
+                max_df=max_df,
+                stop_words='english',
+                lowercase=True,
+                strip_accents='unicode',
+                ngram_range=(1, 2)
+            )
+        
+        # Ajustar vocabulario solo en datos de entrenamiento
+        print("Ajustando vocabulario en datos de entrenamiento...")
+        X_train = self.vectorizer.fit_transform(train_combined)
+        
+        # Transformar conjuntos de validación y prueba
+        X_val = self.vectorizer.transform(val_combined)
+        X_test = self.vectorizer.transform(test_combined)
+        
+        # Procesar variable objetivo (igual que en embedding)
+        y_train = self.label_encoder.fit_transform(train_df[target_column])
+        y_val = self.label_encoder.transform(val_df[target_column])
+        y_test = self.label_encoder.transform(test_df[target_column])
+        
+        # Convertir a categórico para clasificación multiclase
+        num_classes = len(self.label_encoder.classes_)
+        y_train_cat = to_categorical(y_train, num_classes)
+        y_val_cat = to_categorical(y_val, num_classes)
+        y_test_cat = to_categorical(y_test, num_classes)
+        
+        # Estadísticas de memoria y sparsity
+        sparsity_train = 1.0 - (X_train.nnz / (X_train.shape[0] * X_train.shape[1]))
+        memory_mb = (X_train.data.nbytes + X_train.indices.nbytes + X_train.indptr.nbytes) / (1024 * 1024)
+        
+        print(f"Vocabulario final: {X_train.shape[1]} características")
+        print(f"Número de clases: {num_classes}")
+        print(f"Sparsity de entrenamiento: {sparsity_train:.2%}")
+        print(f"Memoria aproximada (entrenamiento): {memory_mb:.1f} MB")
+        print(f"Texto combinado: {'Sí (título + cuerpo)' if use_title_and_body else 'No (solo cuerpo)'}")
+        print(f"Muestras de entrenamiento: {X_train.shape[0]}")
+        print(f"Muestras de validación: {X_val.shape[0]}")
+        print(f"Muestras de prueba: {X_test.shape[0]}")
+        
+        return {
+            'X_train': X_train, 'y_train': y_train_cat,
+            'X_val': X_val, 'y_val': y_val_cat, 
+            'X_test': X_test, 'y_test': y_test_cat,
+            'num_classes': num_classes,
+            'vocab_size': X_train.shape[1],  # Para BoW es el número de características
+            'sparsity': sparsity_train,
+            'memory_mb': memory_mb
+        }
+
+    # Backward compatibility: alias for the old function name
+    def preprocess_text_data(self, *args, **kwargs):
+        """
+        DEPRECATED: Use preprocess_text_data_embedding() instead.
+        This method is kept for backward compatibility.
+        """
+        print("WARNING: preprocess_text_data() is deprecated. Use preprocess_text_data_embedding() instead.")
+        return self.preprocess_text_data_embedding(*args, **kwargs)
 
 class ModelTrainer:
     """Maneja el entrenamiento de modelos con callbacks y monitoreo."""
