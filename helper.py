@@ -18,9 +18,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Optional
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.metrics import classification_report, confusion_matrix
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
