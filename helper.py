@@ -29,6 +29,7 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.utils import to_categorical
+import pickle
 
 # Estilos de visualización
 plt.style.use('default')
@@ -368,6 +369,8 @@ class ModelTrainer:
             'final_train_accuracy': history.history['accuracy'][-1],
             'final_val_accuracy': history.history['val_accuracy'][-1] if 'val_accuracy' in history.history else None
         }
+    
+    
 
 class ResultsManager:
     """Maneja el guardado y carga de resultados de experimentos."""
@@ -683,3 +686,116 @@ def setup_experiment_environment(seed: int = 42):
         print("No hay GPU disponible, usando CPU")
     
     return get_gpu_info()
+
+def save_model_components(model_name: str, 
+                         model: tf.keras.Model, 
+                         vectorizer=None, 
+                         tokenizer=None,
+                         label_encoder=None,
+                         model_dir: str = "models"):
+    """
+    Guarda modelo y todos sus componentes de preprocesamiento para facilitar la carga posterior.
+    
+    Args:
+        model_name (str): Nombre base para los archivos guardados
+        model (tf.keras.Model): Modelo de Keras entrenado
+        vectorizer: Vectorizador TF-IDF para modelos BoW (opcional)
+        tokenizer: Tokenizer de Keras para modelos de embedding (opcional)
+        label_encoder: Encoder de etiquetas para las clases
+        model_dir (str): Directorio donde guardar los componentes
+    """
+    try:
+        # Crear directorio si no existe
+        os.makedirs(model_dir, exist_ok=True)
+        
+        # Guardar modelo Keras
+        model_path = os.path.join(model_dir, f"{model_name}.h5")
+        model.save(model_path)
+        print(f"Modelo guardado: {model_path}")
+        
+        # Guardar vectorizador TF-IDF si existe (para modelos BoW)
+        if vectorizer is not None:
+            vectorizer_path = os.path.join(model_dir, f"{model_name}_vectorizer.pkl")
+            with open(vectorizer_path, 'wb') as f:
+                pickle.dump(vectorizer, f)
+            print(f"Vectorizador TF-IDF guardado: {vectorizer_path}")
+        
+        # Guardar tokenizer si existe (para modelos de embedding)
+        if tokenizer is not None:
+            tokenizer_path = os.path.join(model_dir, f"{model_name}_tokenizer.pkl")
+            with open(tokenizer_path, 'wb') as f:
+                pickle.dump(tokenizer, f)
+            print(f"Tokenizer guardado: {tokenizer_path}")
+        
+        # Guardar label encoder
+        if label_encoder is not None:
+            label_encoder_path = os.path.join(model_dir, f"{model_name}_label_encoder.pkl")
+            with open(label_encoder_path, 'wb') as f:
+                pickle.dump(label_encoder, f)
+            print(f"Label encoder guardado: {label_encoder_path}")
+        
+        print(f"Todos los componentes del modelo '{model_name}' guardados correctamente en {model_dir}/")
+        
+    except Exception as e:
+        print(f"Error guardando componentes del modelo {model_name}: {e}")
+        raise
+
+def load_model_components(model_name: str, model_dir: str = "models") -> Dict:
+    """
+    Carga modelo y todos sus componentes de preprocesamiento.
+    
+    Args:
+        model_name (str): Nombre base de los archivos del modelo
+        model_dir (str): Directorio donde están los componentes
+        
+    Returns:
+        Dict: Diccionario con modelo y componentes cargados
+    """
+    try:
+        components = {}
+        
+        # Cargar modelo Keras
+        model_path = os.path.join(model_dir, f"{model_name}.h5")
+        if os.path.exists(model_path):
+            components['model'] = tf.keras.models.load_model(model_path)
+            print(f"Modelo cargado: {model_path}")
+        else:
+            raise FileNotFoundError(f"Modelo no encontrado: {model_path}")
+        
+        # Cargar vectorizador TF-IDF si existe
+        vectorizer_path = os.path.join(model_dir, f"{model_name}_vectorizer.pkl")
+        if os.path.exists(vectorizer_path):
+            with open(vectorizer_path, 'rb') as f:
+                components['vectorizer'] = pickle.load(f)
+            print(f"Vectorizador TF-IDF cargado: {vectorizer_path}")
+        
+        # Cargar tokenizer si existe
+        tokenizer_path = os.path.join(model_dir, f"{model_name}_tokenizer.pkl")
+        if os.path.exists(tokenizer_path):
+            with open(tokenizer_path, 'rb') as f:
+                components['tokenizer'] = pickle.load(f)
+            print(f"Tokenizer cargado: {tokenizer_path}")
+        
+        # Cargar label encoder
+        label_encoder_path = os.path.join(model_dir, f"{model_name}_label_encoder.pkl")
+        if os.path.exists(label_encoder_path):
+            with open(label_encoder_path, 'rb') as f:
+                components['label_encoder'] = pickle.load(f)
+            print(f"Label encoder cargado: {label_encoder_path}")
+        
+        # Calcular información adicional si es posible
+        if 'vectorizer' in components and hasattr(components['vectorizer'], 'vocabulary_'):
+            components['vocab_size'] = len(components['vectorizer'].vocabulary_)
+        
+        if 'tokenizer' in components and hasattr(components['tokenizer'], 'word_index'):
+            components['vocab_size'] = len(components['tokenizer'].word_index) + 1
+        
+        if 'label_encoder' in components and hasattr(components['label_encoder'], 'classes_'):
+            components['num_classes'] = len(components['label_encoder'].classes_)
+        
+        print(f"Componentes del modelo '{model_name}' cargados correctamente")
+        return components
+        
+    except Exception as e:
+        print(f"Error cargando componentes del modelo {model_name}: {e}")
+        return None

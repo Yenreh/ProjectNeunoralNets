@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Selección de Modelos - Demo MLP{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">
+            <i class="fas fa-network-wired"></i> 
+            Demostración de Modelos MLP
+        </h1>
+        <p class="lead">Selecciona un modelo entrenado para probarlo con texto personalizado o muestras aleatorias.</p>
+    </div>
+</div>
+
+{% if models %}
+<div class="row">
+    {% for model in models %}
+    <div class="col-lg-6 col-xl-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-robot"></i> {{ model }}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if model in stats %}
+                <div class="model-stats">
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Precisión</small>
+                            <div class="fw-bold text-success">
+                                {{ "%.3f"|format(stats[model].accuracy) }}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">F1-Score</small>
+                            <div class="fw-bold text-info">
+                                {{ "%.3f"|format(stats[model].f1_score) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <small class="text-muted">Épocas</small>
+                            <div class="fw-bold">{{ stats[model].epochs }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Idioma</small>
+                            <div class="fw-bold">
+                                {% if stats[model].language == 'multi' %}
+                                    <span class="badge bg-secondary">Multi</span>
+                                {% else %}
+                                    <span class="badge bg-primary">{{ stats[model].language.upper() }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <small class="text-muted">Arquitectura</small>
+                            <div class="fw-bold">{{ stats[model].architecture }}</div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <small class="text-muted">Parámetros</small>
+                            <div class="fw-bold">{{ "{:,}".format(stats[model].parameters) }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Muestras</small>
+                            <div class="fw-bold">{{ "{:,}".format(stats[model].train_samples) }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">Estadísticas no disponibles</p>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('model_interface', model_name=model) }}" 
+                   class="btn btn-primary w-100">
+                    <i class="fas fa-play"></i> Probar Modelo
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-warning" role="alert">
+    <i class="fas fa-exclamation-triangle"></i>
+    No se encontraron modelos en el directorio <code>models/</code>. 
+    Asegúrate de haber entrenado algunos modelos primero.
+</div>
+{% endif %}
+
+<div class="row mt-5">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Información</h5>
+            </div>
+            <div class="card-body">
+                <p>Esta aplicación permite probar modelos de Perceptrón Multicapa (MLP) entrenados para clasificación de reseñas por estrellas (1-5).</p>
+                <ul>
+                    <li><strong>Input Manual:</strong> Escribe tu propio texto de reseña</li>
+                    <li><strong>Muestra Aleatoria:</strong> Usa una muestra del conjunto de validación</li>
+                    <li><strong>Estadísticas:</strong> Ve el rendimiento de cada modelo</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

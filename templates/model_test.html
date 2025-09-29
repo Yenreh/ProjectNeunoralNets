@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Probar {{ model_name }} - Demo MLP{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-robot"></i> 
+                Probando: {{ model_name }}
+            </h2>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas del modelo -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line"></i> Estadísticas del Modelo</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2">
+                        <small class="text-muted">Precisión</small>
+                        <div class="h5 text-success">{{ "%.3f"|format(stats.accuracy) }}</div>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">F1-Score</small>
+                        <div class="h5 text-info">{{ "%.3f"|format(stats.f1_score) }}</div>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">Épocas</small>
+                        <div class="h5">{{ stats.epochs }}</div>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">Parámetros</small>
+                        <div class="h5">{{ "{:,}".format(stats.parameters) }}</div>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">Idioma</small>
+                        <div class="h5">
+                            {% if stats.language == 'multi' %}
+                                <span class="badge bg-secondary">Multi</span>
+                            {% else %}
+                                <span class="badge bg-primary">{{ stats.language.upper() }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">Arquitectura</small>
+                        <div class="h6">{{ stats.architecture }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Interfaz de pruebas -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="manual-tab" data-bs-toggle="tab" 
+                                data-bs-target="#manual" type="button" role="tab">
+                            <i class="fas fa-edit"></i> Input Manual
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="random-tab" data-bs-toggle="tab" 
+                                data-bs-target="#random" type="button" role="tab">
+                            <i class="fas fa-random"></i> Muestra Aleatoria
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <!-- Tab Manual Input -->
+                    <div class="tab-pane fade show active" id="manual" role="tabpanel">
+                        <form id="prediction-form">
+                            <div class="mb-3">
+                                <label for="text-input" class="form-label">Escribe una reseña:</label>
+                                <textarea class="form-control" id="text-input" rows="4" 
+                                         placeholder="Ejemplo: Este producto es excelente, muy buena calidad y llegó rápido. Lo recomiendo totalmente."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="predict-btn">
+                                <i class="fas fa-magic"></i> Predecir
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Tab Random Sample -->
+                    <div class="tab-pane fade" id="random" role="tabpanel">
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-secondary" id="random-sample-btn">
+                                <i class="fas fa-dice"></i> Obtener Muestra Aleatoria
+                            </button>
+                        </div>
+                        <div id="random-sample-content" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label">Texto de la muestra:</label>
+                                <div class="form-control" id="random-text" readonly style="height: auto; min-height: 100px;"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Clasificación real:</label>
+                                <div class="h5" id="true-stars"></div>
+                            </div>
+                            <button type="button" class="btn btn-primary" id="predict-random-btn">
+                                <i class="fas fa-magic"></i> Predecir esta Muestra
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Resultados</h5>
+            </div>
+            <div class="card-body">
+                <div id="prediction-results" style="display: none;">
+                    <div class="text-center mb-3">
+                        <div class="display-4" id="predicted-stars"></div>
+                        <small class="text-muted">Estrellas Predichas</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted">Confianza</small>
+                        <div class="progress">
+                            <div class="progress-bar" id="confidence-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small id="confidence-text"></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted">Distribución de Probabilidades</small>
+                        <div id="class-probabilities"></div>
+                    </div>
+
+                    <div id="comparison-section" style="display: none;">
+                        <hr>
+                        <div class="row">
+                            <div class="col-6 text-center">
+                                <small class="text-muted">Predicción</small>
+                                <div class="h4 text-primary" id="pred-stars-comparison"></div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <small class="text-muted">Real</small>
+                                <div class="h4 text-success" id="true-stars-comparison"></div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <span id="accuracy-indicator" class="badge"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="loading-spinner" style="display: none;">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <div class="mt-2">Procesando...</div>
+                    </div>
+                </div>
+
+                <div id="no-results" class="text-muted text-center">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <p>Los resultados aparecerán aquí después de hacer una predicción.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const MODEL_NAME = "{{ model_name }}";
+</script>
+{% endblock %}
