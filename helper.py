@@ -83,39 +83,55 @@ class DataLoader:
                            val_df: pd.DataFrame, 
                            test_df: pd.DataFrame,
                            text_column: str = 'review_body',
+                           title_column: str = None,
                            target_column: str = 'stars',
                            max_words: int = None,
-                           max_length: int = None) -> Dict:
+                           max_length: int = None,
+                           use_title_and_body: bool = False) -> Dict:
         """
         Preprocesa datos de texto para el entrenamiento de redes neuronales.
         
         Args:
             train_df, val_df, test_df: DataFrames con datos de texto
-            text_column (str): Nombre de la columna de texto
+            text_column (str): Nombre de la columna de texto (cuerpo)
+            title_column (str): Nombre de la columna de título (opcional)
             target_column (str): Nombre de la columna objetivo
             max_words (int): Tamaño máximo del vocabulario
             max_length (int): Longitud máxima de secuencia
+            use_title_and_body (bool): Si True, combina título y cuerpo
             
         Returns:
             Dict: Datos preprocesados con X_train, y_train, etc.
         """
         print("Preprocesando datos de texto...")
         
+        def combine_title_and_body(df, text_col, title_col, use_combined):
+            """Combina título y cuerpo de texto si está habilitado."""
+            if use_combined and title_col and title_col in df.columns:
+                # Combinar título y cuerpo con un separador
+                combined = (df[title_col].fillna("").astype(str) + " " + 
+                           df[text_col].fillna("").astype(str))
+                print(f"Combinando {title_col} + {text_col}")
+                return combined
+            else:
+                print(f"Usando solo {text_col}")
+                return df[text_col].fillna("")
+        
         # Combinar todo el texto para ajustar el tokenizer
-        all_texts = pd.concat([
-            train_df[text_column], 
-            val_df[text_column], 
-            test_df[text_column]
-        ]).fillna("")
+        train_combined = combine_title_and_body(train_df, text_column, title_column, use_title_and_body)
+        val_combined = combine_title_and_body(val_df, text_column, title_column, use_title_and_body)
+        test_combined = combine_title_and_body(test_df, text_column, title_column, use_title_and_body)
+        
+        all_texts = pd.concat([train_combined, val_combined, test_combined])
         
         # Inicializar y ajustar tokenizer
         self.tokenizer = Tokenizer(num_words=max_words, oov_token="<OOV>")
         self.tokenizer.fit_on_texts(all_texts)
         
         # Convertir textos a secuencias
-        X_train = self.tokenizer.texts_to_sequences(train_df[text_column].fillna(""))
-        X_val = self.tokenizer.texts_to_sequences(val_df[text_column].fillna(""))
-        X_test = self.tokenizer.texts_to_sequences(test_df[text_column].fillna(""))
+        X_train = self.tokenizer.texts_to_sequences(train_combined)
+        X_val = self.tokenizer.texts_to_sequences(val_combined)
+        X_test = self.tokenizer.texts_to_sequences(test_combined)
         
         # Aplicar padding a las secuencias
         X_train = pad_sequences(X_train, maxlen=max_length, padding='post', truncating='post')
@@ -136,6 +152,7 @@ class DataLoader:
         print(f"Tamaño del vocabulario: {len(self.tokenizer.word_index)}")
         print(f"Número de clases: {num_classes}")
         print(f"Longitud de secuencia: {max_length}")
+        print(f"Texto combinado: {'Sí (título + cuerpo)' if use_title_and_body else 'No (solo cuerpo)'}")
         print(f"Muestras de entrenamiento: {X_train.shape[0]}")
         print(f"Muestras de validación: {X_val.shape[0]}")
         print(f"Muestras de prueba: {X_test.shape[0]}")
