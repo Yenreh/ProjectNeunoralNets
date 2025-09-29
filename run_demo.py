@@ -3,11 +3,13 @@ from flask import render_template
 from flask import request
 from flask import jsonify
 import os
+import gc
 import numpy as np
 import tensorflow as tf
 from helper import DataLoader
 from helper import ResultsManager
 from helper import load_model_components
+from helper import setup_experiment_environment
 
 app = Flask(__name__)
 
@@ -20,7 +22,8 @@ DATA_DIR = "data"
 loaded_models = {}
 loaded_stats = {}
 validation_data = None
-
+current_loaded_model = None  # Rastrea el modelo actualmente cargado
+setup_experiment_environment(42)
 def load_available_models():
     """Carga la lista de modelos disponibles desde el directorio models"""
     models = []
@@ -67,9 +70,37 @@ def load_validation_samples():
         print(f"Error cargando datos de validación: {e}")
         return None
 
+def clear_loaded_models():
+    """Limpia todos los modelos de memoria y libera recursos"""
+    global loaded_models, current_loaded_model
+    
+    for model_name, model_data in loaded_models.items():
+        if 'model' in model_data and model_data['model'] is not None:
+            try:
+                # Limpiar memoria del modelo de TensorFlow
+                del model_data['model']
+                tf.keras.backend.clear_session()
+                print(f"Modelo {model_name} liberado de memoria")
+            except Exception as e:
+                print(f"Error liberando modelo {model_name}: {e}")
+    
+    loaded_models.clear()
+    current_loaded_model = None
+    
+    # Forzar recolección de basura
+    gc.collect()
+
 def load_model_and_preprocessor(model_name):
     """Carga un modelo específico y sus componentes de preprocesamiento"""
+    global current_loaded_model
+    
+    # Si ya hay un modelo cargado y es diferente, limpiar memoria
+    if current_loaded_model and current_loaded_model != model_name:
+        print(f"Cambiando de modelo {current_loaded_model} a {model_name}")
+        clear_loaded_models()
+    
     if model_name in loaded_models:
+        current_loaded_model = model_name
         return loaded_models[model_name]
     
     try:
@@ -84,10 +115,12 @@ def load_model_and_preprocessor(model_name):
                 'tokenizer': components.get('tokenizer'),
                 'label_encoder': components.get('label_encoder'),
                 'vocab_size': components.get('vocab_size', 5000),
-                'num_classes': components.get('num_classes', 5)
+                'num_classes': components.get('num_classes', 5),
+                'max_length': components.get('max_length', 100)  # Longitud por defecto para embedding
             }
             
             loaded_models[model_name] = model_data
+            current_loaded_model = model_name
             return model_data
         
         else:
@@ -120,10 +153,12 @@ def load_model_and_preprocessor(model_name):
                 'tokenizer': None,
                 'label_encoder': label_encoder,
                 'vocab_size': 5000,
-                'num_classes': 5
+                'num_classes': 5,
+                'max_length': None  # BoW no necesita max_length
             }
             
             loaded_models[model_name] = model_data
+            current_loaded_model = model_name
             return model_data
         
     except Exception as e:
@@ -166,12 +201,24 @@ def predict():
         return jsonify({'error': 'Error cargando el modelo'}), 500
     
     try:
-        # Preprocesar texto
-        X_input = model_data['vectorizer'].transform([text_input])
-        X_input_dense = X_input.toarray().astype(np.float32)
+        # Determinar tipo de modelo y preprocesar texto apropiadamente
+        if model_data['tokenizer'] is not None:
+            # Modelo de embedding - usar tokenizer
+            # Tokenizar el texto
+            sequences = model_data['tokenizer'].texts_to_sequences([text_input])
+            max_length = model_data.get('max_length', 100)  # Usar el valor guardado o 100 por defecto
+            X_input = tf.keras.preprocessing.sequence.pad_sequences(sequences, maxlen=max_length, padding='post', truncating='post')
+            
+        elif model_data['vectorizer'] is not None:
+            # Modelo BoW - usar vectorizer
+            X_input = model_data['vectorizer'].transform([text_input])
+            X_input = X_input.toarray().astype(np.float32)
+            
+        else:
+            return jsonify({'error': 'No se encontró vectorizer ni tokenizer válido'}), 500
         
         # Hacer predicción
-        prediction = model_data['model'].predict(X_input_dense, verbose=0)
+        prediction = model_data['model'].predict(X_input, verbose=0)
         predicted_class = np.argmax(prediction, axis=1)[0]
         confidence = float(prediction[0][predicted_class])
         
@@ -187,7 +234,8 @@ def predict():
             'predicted_stars': stars,
             'confidence': confidence,
             'class_probabilities': class_probabilities,
-            'text_preview': text_input[:100] + '...' if len(text_input) > 100 else text_input
+            'text_preview': text_input[:100] + '...' if len(text_input) > 100 else text_input,
+            'model_type': 'embedding' if model_data['tokenizer'] is not None else 'bow'
         })
         
     except Exception as e:
@@ -240,7 +288,40 @@ def api_models():
     
     return jsonify(model_list)
 
+@app.route('/api/clear_memory', methods=['POST'])
+def clear_memory():
+    """API endpoint para liberar memoria de modelos cargados"""
+    try:
+        clear_loaded_models()
+        return jsonify({'success': True, 'message': 'Memoria liberada exitosamente'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/memory_status')
+def memory_status():
+    """API endpoint para obtener el estado actual de memoria"""
+    global current_loaded_model, loaded_models
+    
+    return jsonify({
+        'current_loaded_model': current_loaded_model,
+        'loaded_models_count': len(loaded_models),
+        'loaded_model_names': list(loaded_models.keys())
+    })
+
+def cleanup_on_exit():
+    """Función de limpieza que se ejecuta al cerrar la aplicación"""
+    print("Cerrando aplicación... Liberando memoria de modelos")
+    clear_loaded_models()
+
 if __name__ == '__main__':
+    import atexit
+    atexit.register(cleanup_on_exit)
+    
     print("Iniciando aplicación Flask...")
     print(f"Modelos disponibles: {load_available_models()}")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    
+    try:
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    except KeyboardInterrupt:
+        print("\nCerrando aplicación por interrupción del usuario...")
+        cleanup_on_exit()
