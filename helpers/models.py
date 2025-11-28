@@ -125,8 +125,8 @@ class MLPWithEmbedding(nn.Module):
             dropout_rate (float): Tasa de dropout
             padding_idx (int): Índice de padding en vocabulario
             use_masked_pooling (bool): Usar mean pooling con máscara para ignorar padding.
-                                       Por defecto False para coincidir con TensorFlow's
-                                       GlobalAveragePooling1D que incluye padding en el promedio.
+                                       Por defecto False para coincidir con GlobalAveragePooling1D
+                                       de TensorFlow que incluye padding en el promedio.
         """
         super(MLPWithEmbedding, self).__init__()
         
@@ -181,7 +181,7 @@ class MLPWithEmbedding(nn.Module):
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
                 if m.bias is not None:
-                    nn.init.zeros_(m.bias)
+                    nn.init.constant_(m.bias, 0)
     
     def forward(self, x):
         """
