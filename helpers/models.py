@@ -166,21 +166,22 @@ class MLPWithEmbedding(nn.Module):
     
     def _initialize_weights(self):
         """
-        Inicializa pesos.
-        Usa inicialización similar a TensorFlow para mejor compatibilidad.
+        Inicializa pesos EXACTAMENTE como TensorFlow para compatibilidad.
         """
-        # Embedding: TensorFlow uses uniform initialization [-0.05, 0.05]
+        # Embedding: TensorFlow Embedding usa uniform [-0.05, 0.05] por defecto
         nn.init.uniform_(self.embedding.weight, -0.05, 0.05)
-        # Keep padding_idx as zeros
+        # Keep padding_idx as zeros (TensorFlow también hace esto con mask_zero)
         if self.padding_idx is not None:
             with torch.no_grad():
                 self.embedding.weight[self.padding_idx].fill_(0)
         
-        # Dense layers: glorot/xavier uniform (same as TensorFlow default)
+        # Dense layers: glorot/xavier uniform (TensorFlow default para Dense)
         for m in self.mlp.modules():
             if isinstance(m, nn.Linear):
+                # Xavier/Glorot uniform: igual que TensorFlow
                 nn.init.xavier_uniform_(m.weight)
                 if m.bias is not None:
+                    # TensorFlow inicializa bias en 0
                     nn.init.constant_(m.bias, 0)
     
     def forward(self, x):
@@ -226,113 +227,3 @@ class MLPWithEmbedding(nn.Module):
             'num_classes': self.num_classes,
             'use_masked_pooling': self.use_masked_pooling
         }
-
-
-class ImprovedMLP(nn.Module):
-    """
-    MLP mejorado con BatchNorm y técnicas avanzadas de regularización.
-    """
-    
-    def __init__(self,
-                 input_dim: int,
-                 hidden_layers: list,
-                 num_classes: int,
-                 dropout_rate: float = 0.3,
-                 use_batch_norm: bool = True):
-        """
-        Inicializa MLP mejorado.
-        
-        Args:
-            input_dim (int): Dimensión de entrada
-            hidden_layers (list): Capas ocultas
-            num_classes (int): Número de clases
-            dropout_rate (float): Tasa de dropout
-            use_batch_norm (bool): Usar Batch Normalization
-        """
-        super(ImprovedMLP, self).__init__()
-        
-        self.input_dim = input_dim
-        self.hidden_layers = hidden_layers
-        self.num_classes = num_classes
-        self.use_batch_norm = use_batch_norm
-        
-        layers = []
-        prev_dim = input_dim
-        
-        for i, hidden_dim in enumerate(hidden_layers):
-            # Capa lineal
-            layers.append(nn.Linear(prev_dim, hidden_dim))
-            
-            # Batch normalization (antes de activación)
-            if use_batch_norm:
-                layers.append(nn.BatchNorm1d(hidden_dim))
-            
-            # Activación
-            layers.append(nn.ReLU())
-            
-            # Dropout
-            layers.append(nn.Dropout(dropout_rate))
-            
-            prev_dim = hidden_dim
-        
-        # Capa de salida
-        layers.append(nn.Linear(prev_dim, num_classes))
-        
-        self.network = nn.Sequential(*layers)
-        
-        # Referencias para compatibilidad
-        self.fc1 = nn.Linear(input_dim, hidden_layers[0])
-        self.fc_out = nn.Linear(hidden_layers[-1], num_classes)
-        
-        self._initialize_weights()
-    
-    def _initialize_weights(self):
-        """Inicializa pesos con He initialization."""
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.BatchNorm1d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-    
-    def forward(self, x):
-        """Forward pass."""
-        return self.network(x)
-    
-    def get_config(self):
-        """Retorna configuración del modelo."""
-        return {
-            'input_dim': self.input_dim,
-            'hidden_layers': self.hidden_layers,
-            'num_classes': self.num_classes,
-            'use_batch_norm': self.use_batch_norm
-        }
-
-
-# Función helper para crear modelos fácilmente
-def create_mlp_model(input_dim, hidden_layers, num_classes, 
-                    model_type='standard', **kwargs):
-    """
-    Factory function para crear modelos MLP.
-    
-    Args:
-        input_dim (int): Dimensión de entrada
-        hidden_layers (list): Capas ocultas
-        num_classes (int): Número de clases
-        model_type (str): 'standard', 'improved', 'embedding'
-        **kwargs: Argumentos adicionales para el modelo
-    
-    Returns:
-        nn.Module: Modelo instanciado
-    """
-    if model_type == 'standard':
-        return MLPClassifier(input_dim, hidden_layers, num_classes, **kwargs)
-    elif model_type == 'improved':
-        return ImprovedMLP(input_dim, hidden_layers, num_classes, **kwargs)
-    elif model_type == 'embedding':
-        return MLPWithEmbedding(input_dim, hidden_layers[0], 
-                               hidden_layers[1:], num_classes, **kwargs)
-    else:
-        raise ValueError(f"Tipo de modelo no soportado: {model_type}")

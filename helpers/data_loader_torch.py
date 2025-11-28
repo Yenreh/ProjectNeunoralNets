@@ -263,9 +263,13 @@ class DataLoaderTorch:
         y_test = self.label_encoder.transform(test_df[target_column])
 
         num_classes = len(self.label_encoder.classes_)
-        vocab_size = len(self.tokenizer.word_index) + 1
+        
 
-        print(f"Tamaño del vocabulario: {len(self.tokenizer.word_index)}")
+        actual_vocab = len(self.tokenizer.word_index) + 1
+        vocab_size = min(max_words, actual_vocab) if max_words else actual_vocab
+
+        print(f"Tamaño del vocabulario real: {len(self.tokenizer.word_index)}")
+        print(f"Vocab size usado (limitado): {vocab_size}")
         print(f"Número de clases: {num_classes}")
         print(f"Longitud de secuencia: {max_length}")
         print(f"Texto combinado: {'Sí (título + cuerpo)' if use_title_and_body else 'No (solo cuerpo)'}")

@@ -115,7 +115,7 @@ class ResultsManager:
         print("=" * 100)
         
         # Summary table
-        print(f"\n{'ID':<3} {'Modelo':<15} {'Lang':<6} {'Precisión':<10} {'Pérdida':<10} {'Épocas':<8} {'Tiempo (s)':<10} {'Muestras':<10}")
+        print(f"\n{'ID':<3} {'Modelo':<25} {'Lang':<6} {'Precisión':<10} {'Pérdida':<10} {'Épocas':<8} {'Tiempo (s)':<10} {'Muestras':<10}")
         print("-" * 95)
         
         for exp in experiments:
@@ -131,7 +131,7 @@ class ResultsManager:
             val_loss = training.get('final_val_loss') or training.get('best_val_loss', 0)
             
             print(f"{exp.get('experiment_id', 0):<3} "
-                  f"{config.get('model_type', 'Unknown')[:14]:<15} "
+                  f"{config.get('model_type', 'Unknown')[:24]:<25} "
                   f"{language:<6} "
                   f"{val_accuracy:<10.4f} "
                   f"{val_loss:<10.4f} "
