@@ -113,7 +113,7 @@ class MLPWithEmbedding(nn.Module):
                  num_classes: int,
                  dropout_rate: float = 0.3,
                  padding_idx: int = 0,
-                 use_masked_pooling: bool = True):
+                 use_masked_pooling: bool = False):
         """
         Inicializa MLP con embedding.
         
@@ -124,7 +124,9 @@ class MLPWithEmbedding(nn.Module):
             num_classes (int): Número de clases
             dropout_rate (float): Tasa de dropout
             padding_idx (int): Índice de padding en vocabulario
-            use_masked_pooling (bool): Usar mean pooling con máscara para ignorar padding
+            use_masked_pooling (bool): Usar mean pooling con máscara para ignorar padding.
+                                       Por defecto False para coincidir con TensorFlow's
+                                       GlobalAveragePooling1D que incluye padding en el promedio.
         """
         super(MLPWithEmbedding, self).__init__()
         
@@ -163,13 +165,23 @@ class MLPWithEmbedding(nn.Module):
         self._initialize_weights()
     
     def _initialize_weights(self):
-        """Inicializa pesos."""
-        nn.init.xavier_uniform_(self.embedding.weight)
+        """
+        Inicializa pesos.
+        Usa inicialización similar a TensorFlow para mejor compatibilidad.
+        """
+        # Embedding: TensorFlow uses uniform initialization [-0.05, 0.05]
+        nn.init.uniform_(self.embedding.weight, -0.05, 0.05)
+        # Keep padding_idx as zeros
+        if self.padding_idx is not None:
+            with torch.no_grad():
+                self.embedding.weight[self.padding_idx].fill_(0)
+        
+        # Dense layers: glorot/xavier uniform (same as TensorFlow default)
         for m in self.mlp.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
                 if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
+                    nn.init.zeros_(m.bias)
     
     def forward(self, x):
         """
