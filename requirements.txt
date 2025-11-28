@@ -10,3 +10,6 @@ seaborn==0.13.2
 
 # Development and Jupyter
 ipykernel==6.29.5
+
+#Flask
+flask
