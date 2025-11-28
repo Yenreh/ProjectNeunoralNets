@@ -271,17 +271,19 @@ def save_model_components_tf(model_name: str,
 
 def save_model_components_torch(model_name: str, 
                                 model,
+                                tokenizer=None,
                                 vectorizer=None,
                                 label_encoder=None,
                                 vocab=None,
-                                model_dir: str = "models/project_part_2"):
+                                model_dir: str = "models/project_part_1"):
     """
     Guarda modelo PyTorch y componentes de preprocesamiento.
     
     Args:
         model_name (str): Nombre base para los archivos
         model: Modelo PyTorch entrenado
-        vectorizer: Vectorizador TF-IDF (opcional)
+        tokenizer: Tokenizer de Keras (opcional, para modelos embedding)
+        vectorizer: Vectorizador TF-IDF (opcional, para modelos BoW)
         label_encoder: Encoder de etiquetas
         vocab: Vocabulario personalizado (opcional)
         model_dir (str): Directorio para guardar
@@ -291,18 +293,37 @@ def save_model_components_torch(model_name: str,
     try:
         os.makedirs(model_dir, exist_ok=True)
         
+        # Obtener configuración del modelo
+        model_config = {}
+        if hasattr(model, 'get_config'):
+            model_config = model.get_config()
+        else:
+            # Fallback para compatibilidad
+            if hasattr(model, 'fc1'):
+                model_config['input_dim'] = model.fc1.in_features
+            if hasattr(model, 'fc_out'):
+                model_config['num_classes'] = model.fc_out.out_features
+            if hasattr(model, 'hidden_layers'):
+                model_config['hidden_layers'] = model.hidden_layers
+            if hasattr(model, 'embedding_dim'):
+                model_config['embedding_dim'] = model.embedding_dim
+        
         # Guardar modelo PyTorch
         model_path = os.path.join(model_dir, f"{model_name}.pth")
         torch.save({
             'model_state_dict': model.state_dict(),
-            'model_config': {
-                'input_dim': model.fc1.in_features if hasattr(model, 'fc1') else None,
-                'num_classes': model.fc_out.out_features if hasattr(model, 'fc_out') else None,
-            }
+            'model_config': model_config
         }, model_path)
         print(f"Modelo guardado: {model_path}")
         
-        # Guardar vectorizador
+        # Guardar tokenizer (para modelos embedding)
+        if tokenizer is not None:
+            tokenizer_path = os.path.join(model_dir, f"{model_name}_tokenizer.pkl")
+            with open(tokenizer_path, 'wb') as f:
+                pickle.dump(tokenizer, f)
+            print(f"Tokenizer guardado: {tokenizer_path}")
+        
+        # Guardar vectorizador (para modelos BoW)
         if vectorizer is not None:
             vectorizer_path = os.path.join(model_dir, f"{model_name}_vectorizer.pkl")
             with open(vectorizer_path, 'wb') as f:
@@ -371,42 +392,105 @@ def load_model_components_tf(model_name: str, model_dir: str = "models/project_p
         return None
 
 
-def load_model_components_torch(model_name: str, model_class, model_dir: str = "models/project_part_2") -> Dict:
-    """Carga modelo PyTorch y componentes."""
+def load_model_components_torch(model_name: str, model_dir: str = "models/project_part_1") -> Dict:
+    """
+    Carga modelo PyTorch y componentes sin requerir la clase del modelo.
+    
+    Args:
+        model_name (str): Nombre del modelo
+        model_dir (str): Directorio donde está el modelo
+        
+    Returns:
+        Dict: Diccionario con componentes cargados
+    """
     import torch
+    from helpers.models import MLPClassifier, MLPWithEmbedding
     
     try:
         components = {}
         
         # Cargar modelo
         model_path = os.path.join(model_dir, f"{model_name}.pth")
-        if os.path.exists(model_path):
-            checkpoint = torch.load(model_path)
-            model_config = checkpoint.get('model_config', {})
+        if not os.path.exists(model_path):
+            print(f"Archivo del modelo no encontrado: {model_path}")
+            return None
             
-            # Instanciar modelo con configuración guardada
-            if model_config.get('input_dim') and model_config.get('num_classes'):
-                model = model_class(
-                    input_dim=model_config['input_dim'],
-                    num_classes=model_config['num_classes']
-                )
-                model.load_state_dict(checkpoint['model_state_dict'])
-                components['model'] = model
-                print(f"Modelo cargado: {model_path}")
+        checkpoint = torch.load(model_path, map_location='cpu')
+        model_config = checkpoint.get('model_config', {})
         
-        # Cargar vectorizador
-        vectorizer_path = os.path.join(model_dir, f"{model_name}_vectorizer.pkl")
-        if os.path.exists(vectorizer_path):
-            with open(vectorizer_path, 'rb') as f:
-                components['vectorizer'] = pickle.load(f)
-            print(f"Vectorizador cargado")
-        
-        # Cargar vocabulario
+        # Detectar tipo de modelo basado en archivos auxiliares
+        tokenizer_path = os.path.join(model_dir, f"{model_name}_tokenizer.pkl")
         vocab_path = os.path.join(model_dir, f"{model_name}_vocab.pkl")
-        if os.path.exists(vocab_path):
-            with open(vocab_path, 'rb') as f:
-                components['vocab'] = pickle.load(f)
-            print(f"Vocabulario cargado")
+        vectorizer_path = os.path.join(model_dir, f"{model_name}_vectorizer.pkl")
+        
+        has_tokenizer = os.path.exists(tokenizer_path)
+        has_vocab = os.path.exists(vocab_path)
+        has_vectorizer = os.path.exists(vectorizer_path)
+        
+        # Determinar tipo de modelo y crear instancia
+        if has_tokenizer or has_vocab:
+            # Modelo con Embedding
+            print(f"Detectado modelo de Embedding")
+            
+            # Cargar tokenizer o vocab para obtener vocab_size
+            if has_tokenizer:
+                with open(tokenizer_path, 'rb') as f:
+                    tokenizer = pickle.load(f)
+                    components['tokenizer'] = tokenizer
+                    vocab_size = len(tokenizer.word_index) + 1
+                    components['max_length'] = 100  # Default, se puede ajustar
+                    print(f"Tokenizer cargado, vocab_size: {vocab_size}")
+            elif has_vocab:
+                with open(vocab_path, 'rb') as f:
+                    vocab = pickle.load(f)
+                    components['vocab'] = vocab
+                    vocab_size = len(vocab)
+                    print(f"Vocabulario cargado, vocab_size: {vocab_size}")
+            
+            # Crear modelo de embedding
+            # Intentar obtener configuración del checkpoint
+            embedding_dim = model_config.get('embedding_dim', 300)
+            hidden_layers = model_config.get('hidden_layers', [256, 128, 64])
+            num_classes = model_config.get('num_classes', 5)
+            
+            model = MLPWithEmbedding(
+                vocab_size=vocab_size,
+                embedding_dim=embedding_dim,
+                hidden_layers=hidden_layers,
+                num_classes=num_classes,
+                dropout_rate=0.3
+            )
+            
+        elif has_vectorizer:
+            # Modelo BoW
+            print(f"Detectado modelo BoW")
+            
+            # Cargar vectorizador
+            with open(vectorizer_path, 'rb') as f:
+                vectorizer = pickle.load(f)
+                components['vectorizer'] = vectorizer
+                input_dim = len(vectorizer.vocabulary_)
+                print(f"Vectorizador cargado, input_dim: {input_dim}")
+            
+            # Crear modelo BoW
+            hidden_layers = model_config.get('hidden_layers', [256, 128, 64])
+            num_classes = model_config.get('num_classes', 5)
+            
+            model = MLPClassifier(
+                input_dim=input_dim,
+                hidden_layers=hidden_layers,
+                num_classes=num_classes,
+                dropout_rate=0.3
+            )
+        else:
+            print(f"No se pudo determinar tipo de modelo (falta vectorizer/tokenizer/vocab)")
+            return None
+        
+        # Cargar pesos del modelo
+        model.load_state_dict(checkpoint['model_state_dict'])
+        model.eval()
+        components['model'] = model
+        print(f"Modelo cargado exitosamente")
         
         # Cargar label encoder
         label_encoder_path = os.path.join(model_dir, f"{model_name}_label_encoder.pkl")
@@ -414,11 +498,17 @@ def load_model_components_torch(model_name: str, model_class, model_dir: str = "
             with open(label_encoder_path, 'rb') as f:
                 components['label_encoder'] = pickle.load(f)
             print(f"Label encoder cargado")
+            components['num_classes'] = len(components['label_encoder'].classes_)
+        
+        # Agregar información adicional
+        components['vocab_size'] = vocab_size if has_tokenizer or has_vocab else input_dim
         
         return components
         
     except Exception as e:
-        print(f"Error cargando componentes: {e}")
+        print(f"Error cargando componentes PyTorch: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 

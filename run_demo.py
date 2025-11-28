@@ -6,15 +6,18 @@ import os
 import gc
 import numpy as np
 import tensorflow as tf
-from helper import DataLoader
-from helper import ResultsManager
-from helper import load_model_components
-from helper import setup_experiment_environment
+import torch
+from helpers.data_loader import DataLoader
+from helpers.data_loader_torch import DataLoaderTorch
+from helpers.results_manager import ResultsManager
+from helpers.utils import load_model_components_tf
+from helpers.utils import load_model_components_torch
+from helpers.utils import setup_experiment_environment
 
 app = Flask(__name__)
 
 # Configuración global
-MODEL_DIR = "models"
+MODEL_DIR = "models/project_part_1"
 OUTPUT_DIR = "output"  
 DATA_DIR = "data"
 
@@ -24,45 +27,72 @@ loaded_stats = {}
 validation_data = None
 current_loaded_model = None  # Rastrea el modelo actualmente cargado
 setup_experiment_environment(42)
+
+def get_model_framework(model_name, model_dir):
+    """Determina si un modelo es TensorFlow o PyTorch basándose en la extensión del archivo"""
+    if os.path.exists(os.path.join(model_dir, f"{model_name}.h5")):
+        return "tensorflow"
+    elif os.path.exists(os.path.join(model_dir, f"{model_name}.pth")):
+        return "pytorch"
+    return None
+
 def load_available_models():
-    """Carga la lista de modelos disponibles desde el directorio models"""
+    """Carga la lista de modelos disponibles desde el directorio models/project_part_1"""
     models = []
     if os.path.exists(MODEL_DIR):
         for file in os.listdir(MODEL_DIR):
-            if file.endswith('.h5'):
-                model_name = file.replace('.h5', '')
-                models.append(model_name)
+            if (file.endswith('.h5') or file.endswith('.pth')) and not file.startswith('backup'):
+                model_name = file.replace('.h5', '').replace('.pth', '')
+                framework = get_model_framework(model_name, MODEL_DIR)
+                models.append({
+                    'name': model_name,
+                    'framework': framework
+                })
     return models
 
 def load_model_stats():
-    """Carga las estadísticas de los modelos desde output/experiment_history.json"""
-    results_manager = ResultsManager(OUTPUT_DIR)
-    history_data = results_manager.load_experiment_history()
+    """Carga las estadísticas de los modelos desde output/project_part_*/experiment_history.json"""
     stats = {}
     
-    for exp in history_data.get("experiments", []):
-        model_path = exp.get('training_results', {}).get('model_path', '')
-        if model_path:
-            model_name = os.path.basename(model_path).replace('.h5', '')
-            stats[model_name] = {
-                'experiment_id': exp.get('experiment_id', 0),
-                'accuracy': exp.get('training_results', {}).get('final_val_accuracy', 0),
-                'loss': exp.get('training_results', {}).get('final_val_loss', 0),
-                'f1_score': exp.get('evaluation_metrics', {}).get('f1_weighted', 0),
-                'epochs': exp.get('training_results', {}).get('epochs_trained', 0),
-                'training_time': exp.get('training_results', {}).get('training_time', 0),
-                'parameters': exp.get('configuration', {}).get('total_parameters', 0),
-                'language': exp.get('configuration', {}).get('language_filter', 'multi'),
-                'architecture': exp.get('configuration', {}).get('hidden_layers', []),
-                'model_type': exp.get('configuration', {}).get('model_type', 'Unknown'),
-                'vocab_size': exp.get('dataset_info', {}).get('vocab_size', 0),
-                'train_samples': exp.get('dataset_info', {}).get('train_samples', 0)
-            }
+    # Buscar en todos los subdirectorios de output (project_part_1, project_part_2, etc.)
+    if os.path.exists(OUTPUT_DIR):
+        for project_dir in os.listdir(OUTPUT_DIR):
+            project_path = os.path.join(OUTPUT_DIR, project_dir)
+            if os.path.isdir(project_path) and project_dir.startswith('project_part_'):
+                try:
+                    results_manager = ResultsManager(OUTPUT_DIR, project_part=project_dir)
+                    history_data = results_manager.load_experiment_history()
+                    
+                    for exp in history_data.get("experiments", []):
+                        model_path = exp.get('training_results', {}).get('model_path', '')
+                        if model_path:
+                            # Extraer nombre del modelo y eliminar extensiones .h5 y .pth
+                            model_name = os.path.basename(model_path).replace('.h5', '').replace('.pth', '')
+                            stats[model_name] = {
+                                'experiment_id': exp.get('experiment_id', 0),
+                                'accuracy': exp.get('training_results', {}).get('final_val_accuracy', 0),
+                                'loss': exp.get('training_results', {}).get('final_val_loss', 0),
+                                'f1_score': exp.get('evaluation_metrics', {}).get('f1_weighted', 0),
+                                'epochs': exp.get('training_results', {}).get('epochs_trained', 0),
+                                'training_time': exp.get('training_results', {}).get('training_time', 0),
+                                'parameters': exp.get('configuration', {}).get('total_parameters', 0),
+                                'language': exp.get('configuration', {}).get('language_filter', 'multi'),
+                                'architecture': exp.get('configuration', {}).get('hidden_layers', []),
+                                'model_type': exp.get('configuration', {}).get('model_type', 'Unknown'),
+                                'vocab_size': exp.get('dataset_info', {}).get('vocab_size', 0),
+                                'train_samples': exp.get('dataset_info', {}).get('train_samples', 0),
+                                'project_part': project_dir
+                            }
+                except Exception as e:
+                    print(f"Error cargando estadísticas de {project_dir}: {e}")
+                    continue
+    
     return stats
 
 def load_validation_samples():
     """Carga muestras del conjunto de validación para pruebas aleatorias"""
     try:
+        # Usar DataLoader de TensorFlow (funciona para ambos casos)
         data_loader = DataLoader(DATA_DIR)
         _, val_df, _ = data_loader.load_all_data()
         return val_df.sample(min(100, len(val_df)))  # Máximo 100 muestras
@@ -91,7 +121,7 @@ def clear_loaded_models():
     gc.collect()
 
 def load_model_and_preprocessor(model_name):
-    """Carga un modelo específico y sus componentes de preprocesamiento"""
+    """Carga un modelo específico y sus componentes de preprocesamiento (TensorFlow o PyTorch)"""
     global current_loaded_model
     
     # Si ya hay un modelo cargado y es diferente, limpiar memoria
@@ -104,8 +134,18 @@ def load_model_and_preprocessor(model_name):
         return loaded_models[model_name]
     
     try:
-        # Intentar cargar componentes guardados usando la función del helper
-        components = load_model_components(model_name, MODEL_DIR)
+        # Determinar el framework del modelo
+        framework = get_model_framework(model_name, MODEL_DIR)
+        
+        if framework == "tensorflow":
+            # Cargar modelo TensorFlow
+            components = load_model_components_tf(model_name, MODEL_DIR)
+        elif framework == "pytorch":
+            # Cargar modelo PyTorch
+            components = load_model_components_torch(model_name, MODEL_DIR)
+        else:
+            print(f"No se pudo determinar el framework para {model_name}")
+            return None
         
         if components and 'model' in components:
             # Usar componentes guardados (método eficiente)
@@ -116,53 +156,23 @@ def load_model_and_preprocessor(model_name):
                 'label_encoder': components.get('label_encoder'),
                 'vocab_size': components.get('vocab_size', 5000),
                 'num_classes': components.get('num_classes', 5),
-                'max_length': components.get('max_length', 100)  # Longitud por defecto para embedding
+                'max_length': components.get('max_length', 100),
+                'framework': framework
             }
             
             loaded_models[model_name] = model_data
             current_loaded_model = model_name
+            print(f"Modelo {model_name} ({framework}) cargado exitosamente")
             return model_data
         
         else:
-            # Fallback: recrear componentes (método legacy con optimización)
-            print(f"Componentes no encontrados para {model_name}, usando método legacy optimizado...")
-            
-            model_path = os.path.join(MODEL_DIR, f"{model_name}.h5")
-            model = tf.keras.models.load_model(model_path)
-            
-            # Crear vectorizador básico sin procesar todo el dataset
-            from sklearn.feature_extraction.text import TfidfVectorizer
-            from sklearn.preprocessing import LabelEncoder
-            
-            vectorizer = TfidfVectorizer(
-                max_features=5000,
-                min_df=3,
-                max_df=0.85,
-                stop_words='english'
-            )
-            
-            # Crear label_encoder básico (asumiendo clasificación 1-5 estrellas)
-            label_encoder = LabelEncoder()
-            label_encoder.fit([1, 2, 3, 4, 5])
-            
-            print(f"Usando configuración por defecto. Considera volver a entrenar y guardar con save_model_components().")
-            
-            model_data = {
-                'model': model,
-                'vectorizer': vectorizer,
-                'tokenizer': None,
-                'label_encoder': label_encoder,
-                'vocab_size': 5000,
-                'num_classes': 5,
-                'max_length': None  # BoW no necesita max_length
-            }
-            
-            loaded_models[model_name] = model_data
-            current_loaded_model = model_name
-            return model_data
+            print(f"No se pudieron cargar los componentes para {model_name}")
+            return None
         
     except Exception as e:
         print(f"Error cargando modelo {model_name}: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 @app.route('/')
@@ -175,11 +185,35 @@ def index():
 @app.route('/model/<model_name>')
 def model_interface(model_name):
     """Interfaz de prueba para un modelo específico"""
-    if model_name not in load_available_models():
+    available_models = load_available_models()
+    model_names = [m['name'] for m in available_models]
+    
+    if model_name not in model_names:
         return "Modelo no encontrado", 404
     
     stats = load_model_stats()
     model_stats = stats.get(model_name, {})
+    
+    # Obtener framework del modelo
+    framework = get_model_framework(model_name, MODEL_DIR)
+    model_stats['framework'] = framework
+    
+    # Si no hay estadísticas, proporcionar valores por defecto
+    if not model_stats or 'accuracy' not in model_stats:
+        model_stats = {
+            'framework': framework,
+            'accuracy': 0.0,
+            'loss': 0.0,
+            'f1_score': 0.0,
+            'epochs': 0,
+            'training_time': 0,
+            'parameters': 0,
+            'language': 'unknown',
+            'architecture': [],
+            'model_type': 'Unknown',
+            'vocab_size': 0,
+            'train_samples': 0
+        }
     
     return render_template('model_test.html', 
                          model_name=model_name, 
@@ -187,7 +221,7 @@ def model_interface(model_name):
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    """Endpoint para hacer predicciones"""
+    """Endpoint para hacer predicciones (soporta TensorFlow y PyTorch)"""
     data = request.json
     model_name = data.get('model_name')
     text_input = data.get('text_input', '').strip()
@@ -201,24 +235,51 @@ def predict():
         return jsonify({'error': 'Error cargando el modelo'}), 500
     
     try:
-        # Determinar tipo de modelo y preprocesar texto apropiadamente
+        framework = model_data.get('framework', 'tensorflow')
+        
+        # Preprocesar texto según el tipo de modelo
         if model_data['tokenizer'] is not None:
             # Modelo de embedding - usar tokenizer
-            # Tokenizar el texto
             sequences = model_data['tokenizer'].texts_to_sequences([text_input])
-            max_length = model_data.get('max_length', 100)  # Usar el valor guardado o 100 por defecto
-            X_input = tf.keras.preprocessing.sequence.pad_sequences(sequences, maxlen=max_length, padding='post', truncating='post')
+            max_length = model_data.get('max_length', 100)
+            
+            if framework == 'pytorch':
+                # PyTorch: crear tensor
+                import torch
+                from tensorflow.keras.preprocessing.sequence import pad_sequences
+                padded = pad_sequences(sequences, maxlen=max_length, padding='post', truncating='post')
+                X_input = torch.tensor(padded, dtype=torch.long)
+            else:
+                # TensorFlow: pad sequences
+                X_input = tf.keras.preprocessing.sequence.pad_sequences(
+                    sequences, maxlen=max_length, padding='post', truncating='post'
+                )
             
         elif model_data['vectorizer'] is not None:
             # Modelo BoW - usar vectorizer
             X_input = model_data['vectorizer'].transform([text_input])
-            X_input = X_input.toarray().astype(np.float32)
             
+            if framework == 'pytorch':
+                # PyTorch: convertir a tensor
+                import torch
+                X_input = torch.tensor(X_input.toarray(), dtype=torch.float32)
+            else:
+                # TensorFlow: convertir a array denso
+                X_input = X_input.toarray().astype(np.float32)
         else:
             return jsonify({'error': 'No se encontró vectorizer ni tokenizer válido'}), 500
         
-        # Hacer predicción
-        prediction = model_data['model'].predict(X_input, verbose=0)
+        # Hacer predicción según el framework
+        if framework == 'pytorch':
+            model = model_data['model']
+            model.eval()
+            with torch.no_grad():
+                prediction = model(X_input)
+                prediction = torch.softmax(prediction, dim=1).cpu().numpy()
+        else:
+            # TensorFlow
+            prediction = model_data['model'].predict(X_input, verbose=0)
+        
         predicted_class = np.argmax(prediction, axis=1)[0]
         confidence = float(prediction[0][predicted_class])
         
@@ -235,10 +296,13 @@ def predict():
             'confidence': confidence,
             'class_probabilities': class_probabilities,
             'text_preview': text_input[:100] + '...' if len(text_input) > 100 else text_input,
-            'model_type': 'embedding' if model_data['tokenizer'] is not None else 'bow'
+            'model_type': 'embedding' if model_data['tokenizer'] is not None else 'bow',
+            'framework': framework
         })
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Error en predicción: {str(e)}'}), 500
 
 @app.route('/random_sample/<model_name>')
@@ -274,15 +338,17 @@ def get_random_sample(model_name):
 
 @app.route('/api/models')
 def api_models():
-    """API endpoint para obtener lista de modelos con estadísticas"""
+    """API endpoint para obtener lista de modelos con estadísticas y framework"""
     models = load_available_models()
     stats = load_model_stats()
     
     model_list = []
     for model in models:
+        model_name = model['name']
         model_info = {
-            'name': model,
-            'stats': stats.get(model, {})
+            'name': model_name,
+            'framework': model['framework'],
+            'stats': stats.get(model_name, {})
         }
         model_list.append(model_info)
     
