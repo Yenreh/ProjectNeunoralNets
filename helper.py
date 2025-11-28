@@ -3,12 +3,31 @@ Funciones auxiliares para el Proyecto de Redes Neuronales - Perceptrón Multicap
 Proyecto Redes Neuronales 2025-II
 Universidad Del Valle
 
+⚠️ DEPRECATION WARNING ⚠️
+Este módulo se mantiene por compatibilidad con la Parte 1 del proyecto.
+Para nuevos desarrollos, usar los módulos en el paquete 'helpers/':
+  - helpers.data_loader (TensorFlow)
+  - helpers.data_loader_torch (PyTorch)
+  - helpers.model_trainer_tf (TensorFlow)
+  - helpers.model_trainer_torch (PyTorch)
+  - helpers.results_manager
+  - helpers.visualizer
+  - helpers.utils
+
 Este módulo contiene funciones utilitarias reutilizables para:
 - Carga y preprocesamiento de datos
 - Entrenamiento y evaluación de modelos
 - Guardado de resultados y visualización
 - Seguimiento de experimentos
 """
+
+import warnings
+warnings.warn(
+    "Este módulo 'helper.py' está deprecado. "
+    "Use los módulos del paquete 'helpers/' para nuevos desarrollos.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 import os
 import json
