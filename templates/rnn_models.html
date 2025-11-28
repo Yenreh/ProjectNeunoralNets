@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "macros/model_card.html" import render_model_card %}
+
+{% block title %}Modelos RNN sin Memoria{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">
+            <i class="fas fa-project-diagram"></i> 
+            Modelos RNN sin Memoria
+        </h1>
+        <p class="lead">Explora modelos de Redes Neuronales Recurrentes simples para procesamiento secuencial de texto.</p>
+    </div>
+</div>
+
+{% if models %}
+<div class="row">
+    {% for model in models %}
+        {{ render_model_card(model, stats, 'success', 'Probar Modelo', 'model_interface') }}
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+    <i class="fas fa-info-circle"></i>
+    No se encontraron modelos RNN sin memoria en el directorio <code>models/project_part_2/</code>. 
+    Esta sección estará disponible cuando entrenes modelos RNN.
+</div>
+{% endif %}
+
+<div class="row mt-5">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-info-circle"></i> Información sobre RNN sin Memoria</h5>
+            </div>
+            <div class="card-body">
+                <p>Las Redes Neuronales Recurrentes (RNN) simples procesan secuencias de datos manteniendo un estado oculto que captura información de pasos anteriores.</p>
+                <ul>
+                    <li><strong>Arquitectura:</strong> Capas recurrentes simples para procesamiento secuencial</li>
+                    <li><strong>Ventaja:</strong> Procesa texto palabra por palabra considerando el orden</li>
+                    <li><strong>Limitación:</strong> Dificultad para capturar dependencias a largo plazo</li>
+                    <li><strong>Uso:</strong> Adecuado para secuencias cortas y medianas</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

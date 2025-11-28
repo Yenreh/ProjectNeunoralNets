@@ -78,9 +78,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Función para obtener muestra aleatoria
     function getRandomSample() {
+        const btn = randomSampleBtn;
+        const originalHTML = btn.innerHTML;
+        
+        // Mostrar indicador de carga en el botón
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Cargando...';
+        
         fetch(`/random_sample/${MODEL_NAME}`)
         .then(response => response.json())
         .then(data => {
+            // Restaurar botón
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+            
             if (data.error) {
                 alert('Error: ' + data.error);
                 return;
@@ -90,6 +101,10 @@ document.addEventListener('DOMContentLoaded', function() {
             displayRandomSample(data);
         })
         .catch(error => {
+            // Restaurar botón en caso de error
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+            
             console.error('Error:', error);
             alert('Error al obtener muestra aleatoria.');
         });

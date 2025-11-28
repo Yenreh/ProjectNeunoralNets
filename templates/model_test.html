@@ -6,9 +6,10 @@
 <div class="row">
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>
-                <i class="fas fa-robot"></i> 
+            <div class="d-flex  align-items-center "> 
+                <div class="fs-2">   
                 Probando: {{ model_name }}
+                </div>
                 {% if stats.framework == 'tensorflow' %}
                     <span class="badge bg-warning text-dark ms-2">
                         <i class="fas fa-brain"></i> TensorFlow
@@ -18,7 +19,7 @@
                         <i class="fas fa-fire"></i> PyTorch
                     </span>
                 {% endif %}
-            </h2>
+            </div>
             <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> Volver
             </a>
@@ -31,7 +32,7 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-chart-line"></i> Estadísticas del Modelo</h5>
+                <h5><i class="fas fa-chart-line me-2"></i>Características del Modelo</h5>
             </div>
             <div class="card-body">
                 {% if stats.accuracy > 0 %}
@@ -111,7 +112,7 @@
                                 <textarea class="form-control" id="text-input" rows="4" 
                                          placeholder="Ejemplo: Este producto es excelente, muy buena calidad y llegó rápido. Lo recomiendo totalmente."></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary" id="predict-btn">
+                            <button type="submit" class="btn btn-primary float-end" id="predict-btn">
                                 <i class="fas fa-magic"></i> Predecir
                             </button>
                         </form>
@@ -119,21 +120,21 @@
 
                     <!-- Tab Random Sample -->
                     <div class="tab-pane fade" id="random" role="tabpanel">
-                        <div class="mb-3">
-                            <button type="button" class="btn btn-secondary" id="random-sample-btn">
+                        <div class="mb-3 text-center">
+                            <button type="button" class="btn btn-primary" id="random-sample-btn">
                                 <i class="fas fa-dice"></i> Obtener Muestra Aleatoria
                             </button>
                         </div>
                         <div id="random-sample-content" style="display: none;">
                             <div class="mb-3">
                                 <label class="form-label">Texto de la muestra:</label>
-                                <div class="form-control" id="random-text" readonly style="height: auto; min-height: 100px;"></div>
+                                <div class="p-3 bg-light border rounded" id="random-text" style="min-height: 100px; max-height: 200px; overflow-y: auto;"></div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Clasificación real:</label>
                                 <div class="h5" id="true-stars"></div>
                             </div>
-                            <button type="button" class="btn btn-primary" id="predict-random-btn">
+                            <button type="button" class="btn btn-primary float-end" id="predict-random-btn">
                                 <i class="fas fa-magic"></i> Predecir esta Muestra
                             </button>
                         </div>
@@ -147,7 +148,7 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-chart-bar"></i> Resultados</h5>
+                <h5><i class="fas fa-chart-bar me-2"></i>Resultados</h5>
             </div>
             <div class="card-body">
                 <div id="prediction-results" style="display: none;">
@@ -190,7 +191,7 @@
                 <div id="loading-spinner" style="display: none;">
                     <div class="text-center">
                         <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Cargando...</span>
+                            <span class="visually-hidden">brand-icon-wrapper...</span>
                         </div>
                         <div class="mt-2">Procesando...</div>
                     </div>

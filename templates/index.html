@@ -1,129 +1,123 @@
 {% extends "base.html" %}
 
-{% block title %}Selección de Modelos - Demo MLP{% endblock %}
+{% block title %}Proyecto Redes Neuronales{% endblock %}
 
 {% block content %}
 <div class="row">
-    <div class="col-md-12">
+    <div class="col-md-12 text-center mb-5">
         <h1 class="mb-4">
-            <i class="fas fa-network-wired"></i> 
-            Demostración de Modelos MLP
+            <i class="fas fa-brain"></i> 
+            Proyecto de Redes Neuronales
         </h1>
-        <p class="lead">Selecciona un modelo entrenado para probarlo con texto personalizado o muestras aleatorias.</p>
+        <p class="lead">Explora diferentes arquitecturas de redes neuronales para clasificación de texto</p>
     </div>
 </div>
 
-{% if models %}
-<div class="row">
-    {% for model in models %}
-    <div class="col-lg-6 col-xl-4 mb-4">
-        <div class="card h-100 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-robot"></i> {{ model.name }}
-                </h5>
-                <small>
-                    {% if model.framework == 'tensorflow' %}
-                        <span class="badge bg-warning text-dark">
-                            <i class="fas fa-brain"></i> TensorFlow
-                        </span>
-                    {% elif model.framework == 'pytorch' %}
-                        <span class="badge bg-danger">
-                            <i class="fas fa-fire"></i> PyTorch
-                        </span>
-                    {% endif %}
-                </small>
+<div class="row g-4">
+    <!-- Tarjeta MLP -->
+    <div class="col-lg-4 d-flex">
+        <div class="card h-100 shadow-sm w-100">
+            <div class="card-header bg-primary text-white text-center">
+                <i class="fas fa-network-wired fa-3x mb-3"></i>
+                <h3 class="card-title mb-0">MLP</h3>
+                <small>Perceptrón Multicapa</small>
             </div>
-            <div class="card-body">
-                {% if model.name in stats and stats[model.name].accuracy > 0 %}
-                <div class="model-stats">
-                    <div class="row">
-                        <div class="col-6">
-                            <small class="text-muted">Precisión</small>
-                            <div class="fw-bold text-success">
-                                {{ "%.3f"|format(stats[model.name].accuracy) }}
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">F1-Score</small>
-                            <div class="fw-bold text-info">
-                                {{ "%.3f"|format(stats[model.name].f1_score) }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-6">
-                            <small class="text-muted">Épocas</small>
-                            <div class="fw-bold">{{ stats[model.name].epochs }}</div>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">Idioma</small>
-                            <div class="fw-bold">
-                                {% if stats[model.name].language == 'multi' %}
-                                    <span class="badge bg-secondary">Multi</span>
-                                {% else %}
-                                    <span class="badge bg-primary">{{ stats[model.name].language.upper() }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <small class="text-muted">Arquitectura</small>
-                            <div class="fw-bold">{{ stats[model.name].architecture }}</div>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-6">
-                            <small class="text-muted">Parámetros</small>
-                            <div class="fw-bold">{{ "{:,}".format(stats[model.name].parameters) }}</div>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted">Muestras</small>
-                            <div class="fw-bold">{{ "{:,}".format(stats[model.name].train_samples) }}</div>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <div class="text-muted text-center py-3">
-                    <i class="fas fa-info-circle"></i>
-                    <p class="mb-0 mt-2">Estadísticas de entrenamiento no disponibles</p>
-                    <small>El modelo está listo para usar</small>
-                </div>
-                {% endif %}
+            <div class="card-body d-flex flex-column">
+                <p class="text-muted flex-grow-1">
+                    Redes neuronales feedforward con capas densas completamente conectadas. 
+                    Arquitectura simple pero efectiva para clasificación de texto usando representaciones BoW o embeddings.
+                </p>
+                <ul class="list-unstyled mb-3">
+                    <li><i class="fas fa-check text-success"></i> Capas densas</li>
+                    <li><i class="fas fa-check text-success"></i> Bag of Words</li>
+                    <li><i class="fas fa-check text-success"></i> Word Embeddings</li>
+                </ul>
             </div>
             <div class="card-footer">
-                <a href="{{ url_for('model_interface', model_name=model.name) }}" 
-                   class="btn btn-primary w-100">
-                    <i class="fas fa-play"></i> Probar Modelo
+                <a href="{{ url_for('mlp_models') }}" class="btn btn-primary w-100">
+                    <i class="fas fa-arrow-right"></i> Ver Modelos MLP
                 </a>
             </div>
         </div>
     </div>
-    {% endfor %}
+
+    <!-- Tarjeta RNN sin Memoria -->
+    <div class="col-lg-4 d-flex">
+        <div class="card h-100 shadow-sm w-100">
+            <div class="card-header bg-success text-white text-center">
+                <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                <h3 class="card-title mb-0">RNN</h3>
+                <small>Redes Recurrentes Simples</small>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <p class="text-muted flex-grow-1">
+                    Redes neuronales recurrentes básicas que procesan secuencias manteniendo un estado oculto. 
+                    Capturan el orden de las palabras y dependencias a corto plazo en el texto.
+                </p>
+                <ul class="list-unstyled mb-3">
+                    <li><i class="fas fa-check text-success"></i> Procesamiento secuencial</li>
+                    <li><i class="fas fa-check text-success"></i> Estado oculto</li>
+                    <li><i class="fas fa-check text-success"></i> Contexto local</li>
+                </ul>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('rnn_models') }}" class="btn btn-success w-100">
+                    <i class="fas fa-arrow-right"></i> Ver Modelos RNN
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta RNN con Memoria -->
+    <div class="col-lg-4 d-flex">
+        <div class="card h-100 shadow-sm w-100">
+            <div class="card-header bg-info text-white text-center">
+                <i class="fas fa-brain fa-3x mb-3"></i>
+                <h3 class="card-title mb-0">LSTM/GRU</h3>
+                <small>RNN con Memoria</small>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <p class="text-muted flex-grow-1">
+                    Arquitecturas avanzadas con mecanismos de memoria a largo plazo (LSTM) o puertas simplificadas (GRU). 
+                    Excelentes para capturar dependencias complejas y contexto distante.
+                </p>
+                <ul class="list-unstyled mb-3">
+                    <li><i class="fas fa-check text-success"></i> Memoria a largo plazo</li>
+                    <li><i class="fas fa-check text-success"></i> Mecanismos de puertas</li>
+                    <li><i class="fas fa-check text-success"></i> Contexto global</li>
+                </ul>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('lstm_models') }}" class="btn btn-info w-100">
+                    <i class="fas fa-arrow-right"></i> Ver Modelos LSTM/GRU
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
-{% else %}
-<div class="alert alert-warning" role="alert">
-    <i class="fas fa-exclamation-triangle"></i>
-    No se encontraron modelos en el directorio <code>models/project_part_1/</code>. 
-    Asegúrate de haber entrenado algunos modelos primero.
-</div>
-{% endif %}
 
 <div class="row mt-5">
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-info-circle"></i> Información</h5>
+                <h5><i class="fas fa-info-circle"></i> Sobre el Proyecto</h5>
             </div>
             <div class="card-body">
-                <p>Esta aplicación permite probar modelos de Perceptrón Multicapa (MLP) entrenados para clasificación de reseñas por estrellas (1-5).</p>
-                <ul>
-                    <li><strong>Frameworks:</strong> Soporta modelos de TensorFlow y PyTorch</li>
-                    <li><strong>Input Manual:</strong> Escribe tu propio texto de reseña</li>
-                    <li><strong>Muestra Aleatoria:</strong> Usa una muestra del conjunto de validación</li>
-                    <li><strong>Estadísticas:</strong> Ve el rendimiento de cada modelo</li>
-                </ul>
+                <p>Este proyecto explora diferentes arquitecturas de redes neuronales para la clasificación de reseñas en una escala de 1 a 5 estrellas.</p>
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-database text-primary"></i> Dataset</h6>
+                        <p class="small text-muted">200,000 reseñas de productos etiquetadas con estrellas</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-cogs text-success"></i> Frameworks</h6>
+                        <p class="small text-muted">TensorFlow y PyTorch para entrenamiento de modelos</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-chart-line text-info"></i> Evaluación</h6>
+                        <p class="small text-muted">Métricas de precisión, F1-Score y matriz de confusión</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

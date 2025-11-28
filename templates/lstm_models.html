@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "macros/model_card.html" import render_model_card %}
+
+{% block title %}Modelos RNN con Memoria{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">
+            <i class="fas fa-brain"></i> 
+            Modelos RNN con Memoria (LSTM/GRU)
+        </h1>
+        <p class="lead">Modelos avanzados con memoria a largo plazo para capturar dependencias complejas en el texto.</p>
+    </div>
+</div>
+
+{% if models %}
+<div class="row">
+    {% for model in models %}
+        {{ render_model_card(model, stats, 'info', 'Probar Modelo', 'model_interface') }}
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+    <i class="fas fa-info-circle"></i>
+    No se encontraron modelos RNN con memoria en el directorio <code>models/project_part_3/</code>. 
+    Esta sección estará disponible cuando entrenes modelos LSTM o GRU.
+</div>
+{% endif %}
+
+<div class="row mt-5">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-info-circle"></i> Información sobre RNN con Memoria</h5>
+            </div>
+            <div class="card-body">
+                <p>Los modelos LSTM (Long Short-Term Memory) y GRU (Gated Recurrent Unit) son variantes avanzadas de RNN diseñadas para capturar dependencias a largo plazo.</p>
+                <ul>
+                    <li><strong>LSTM:</strong> Usa puertas de entrada, salida y olvido para controlar el flujo de información</li>
+                    <li><strong>GRU:</strong> Versión simplificada con puertas de actualización y reinicio</li>
+                    <li><strong>Ventaja:</strong> Excelente para capturar contexto y relaciones distantes en el texto</li>
+                    <li><strong>Uso:</strong> Ideal para análisis de sentimientos y clasificación de texto complejo</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

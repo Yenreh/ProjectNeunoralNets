@@ -659,8 +659,8 @@
           ]
         },
         "epochs_trained": 33,
-        "training_time": 92.333664,
-        "model_path": "models/project_part_1/MLP_Embedding_Torch_20251128_134645.pth",
+        "training_time": 94.484479,
+        "model_path": "models/project_part_1/MLP_Embedding_Torch_20251128_144320.pth",
         "best_val_loss": 0.9594880759716033,
         "best_val_accuracy": 0.5936,
         "final_train_loss": 0.7585683137254642,
@@ -728,7 +728,7 @@
         "cuda_version": "13.0",
         "framework": "pytorch"
       },
-      "timestamp": "2025-11-28T13:48:19.188821",
+      "timestamp": "2025-11-28T14:44:56.442842",
       "experiment_id": 3
     },
     {
@@ -824,8 +824,8 @@
           ]
         },
         "epochs_trained": 12,
-        "training_time": 27.62401,
-        "model_path": "models/project_part_1/MLP_BoW_Torch_20251128_135017.pth",
+        "training_time": 28.145932,
+        "model_path": "models/project_part_1/MLP_BoW_Torch_20251128_144615.pth",
         "best_val_loss": 1.0696447670459748,
         "best_val_accuracy": 0.5336,
         "final_train_loss": 0.3697872852425441,
@@ -893,7 +893,7 @@
         "cuda_version": "13.0",
         "framework": "pytorch"
       },
-      "timestamp": "2025-11-28T13:50:46.486219",
+      "timestamp": "2025-11-28T14:46:44.569379",
       "experiment_id": 4
     }
   ],

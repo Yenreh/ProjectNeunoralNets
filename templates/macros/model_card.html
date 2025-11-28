@@ -1,0 +1,90 @@
+{% macro render_model_card(model, stats, color_class='primary', button_text='Probar Modelo', button_route='model_interface') %}
+<div class="col-lg-6 col-xl-4 mb-4">
+    <div class="model-card-wrapper">
+        <div class="card shadow-sm">
+            <div class="card-header bg-{{ color_class }} text-white">
+                <h5 class="card-title mb-0">
+                    {{ model.name }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-end mb-3">
+                    {% if model.framework == 'tensorflow' %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-brain"></i> TensorFlow
+                        </span>
+                    {% elif model.framework == 'pytorch' %}
+                        <span class="badge bg-danger">
+                            <i class="fas fa-fire"></i> PyTorch
+                        </span>
+                    {% endif %}
+                </div>
+                {% if model.name in stats and stats[model.name].accuracy > 0 %}
+                <div class="model-stats">
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">Precisión</small>
+                            <div class="fw-bold text-success">
+                                {{ "%.3f"|format(stats[model.name].accuracy) }}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">F1-Score</small>
+                            <div class="fw-bold text-info">
+                                {{ "%.3f"|format(stats[model.name].f1_score) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">Épocas</small>
+                            <div class="fw-bold">{{ stats[model.name].epochs }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Idioma</small>
+                            <div class="fw-bold">
+                                {% if stats[model.name].language == 'multi' %}
+                                    <span class="badge bg-secondary">Multi</span>
+                                {% else %}
+                                    <span class="badge bg-primary">{{ stats[model.name].language.upper() }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-12">
+                            <small class="text-muted">Arquitectura</small>
+                            <div class="fw-bold small">{{ stats[model.name].architecture }}</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Parámetros</small>
+                            <div class="fw-bold small">{{ "{:,}".format(stats[model.name].parameters) }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Muestras</small>
+                            <div class="fw-bold small">{{ "{:,}".format(stats[model.name].train_samples) }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="model-placeholder">
+                    <div>
+                        <i class="fas fa-info-circle fa-2x text-muted mb-3"></i>
+                        <p class="mb-0 text-muted">Estadísticas de entrenamiento no disponibles</p>
+                        <small class="text-muted">El modelo está listo para usar</small>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for(button_route, model_name=model.name) }}" 
+                   class="btn btn-{{ color_class }} w-100">
+                    <i class="fas fa-play"></i> {{ button_text }}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
