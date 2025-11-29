@@ -1,21 +1,17 @@
 """
 Data Loading and Preprocessing Module for PyTorch
 Proyecto Redes Neuronales 2025-II - Universidad Del Valle
-
-Maneja la carga y preprocesamiento de datos para modelos de PyTorch.
-Usa Keras Preprocessing (igual que TensorFlow) para tokenización.
 """
 
 import os
 import pandas as pd
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader, TensorDataset
-from typing import Dict, Tuple, Optional
+from torch.utils.data import DataLoader, TensorDataset
+from typing import Dict, Tuple
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-# Importar Keras Preprocessing (igual que TensorFlow)
 from keras_preprocessing.text import Tokenizer
 from keras_preprocessing.sequence import pad_sequences
 
@@ -240,12 +236,13 @@ class DataLoaderTorch:
         val_combined = combine_title_and_body(val_df, text_column, title_column, use_title_and_body)
         test_combined = combine_title_and_body(test_df, text_column, title_column, use_title_and_body)
 
-        # Combinar TODOS los textos para ajustar tokenizer (EXACTAMENTE como TensorFlow)
-        all_texts = pd.concat([train_combined, val_combined, test_combined])
+        # CORREGIDO: Ajustar tokenizer SOLO con datos de entrenamiento (evitar data leakage)
+        # El tokenizer NO debe ver datos de validación o test durante el ajuste del vocabulario
+        print("Ajustando tokenizer solo con datos de entrenamiento (evitando data leakage)...")
 
-        # Inicializar y ajustar tokenizer (igual que TensorFlow)
+        # Inicializar y ajustar tokenizer solo con train
         self.tokenizer = Tokenizer(num_words=max_words, oov_token="<OOV>")
-        self.tokenizer.fit_on_texts(all_texts)
+        self.tokenizer.fit_on_texts(train_combined)
 
         # Convertir textos a secuencias
         X_train = self.tokenizer.texts_to_sequences(train_combined)

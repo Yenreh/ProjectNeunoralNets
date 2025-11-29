@@ -227,3 +227,239 @@ class MLPWithEmbedding(nn.Module):
             'num_classes': self.num_classes,
             'use_masked_pooling': self.use_masked_pooling
         }
+
+
+class SimpleRNNClassifier(nn.Module):
+    """RNN simple (Elman RNN) para clasificacion de texto."""
+    
+    def __init__(self,
+                 vocab_size: int,
+                 embedding_dim: int,
+                 hidden_size: int,
+                 num_classes: int,
+                 num_layers: int = 1,
+                 dropout_rate: float = 0.3,
+                 padding_idx: int = 0,
+                 bidirectional: bool = False):
+        super(SimpleRNNClassifier, self).__init__()
+        
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.hidden_size = hidden_size
+        self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.bidirectional = bidirectional
+        self.padding_idx = padding_idx
+        
+        self.embedding = nn.Embedding(
+            num_embeddings=vocab_size,
+            embedding_dim=embedding_dim,
+            padding_idx=padding_idx
+        )
+        
+        self.rnn = nn.RNN(
+            input_size=embedding_dim,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout_rate if num_layers > 1 else 0,
+            bidirectional=bidirectional
+        )
+        
+        self.dropout = nn.Dropout(dropout_rate)
+        
+        rnn_output_size = hidden_size * 2 if bidirectional else hidden_size
+        self.fc = nn.Linear(rnn_output_size, num_classes)
+        
+        self._initialize_weights()
+    
+    def _initialize_weights(self):
+        nn.init.uniform_(self.embedding.weight, -0.05, 0.05)
+        if self.padding_idx is not None:
+            with torch.no_grad():
+                self.embedding.weight[self.padding_idx].fill_(0)
+        nn.init.xavier_uniform_(self.fc.weight)
+        nn.init.constant_(self.fc.bias, 0)
+    
+    def forward(self, x):
+        embedded = self.embedding(x)
+        rnn_out, hidden = self.rnn(embedded)
+        
+        # Average pooling con mascara
+        mask = (x != self.padding_idx).float().unsqueeze(-1)
+        masked_output = rnn_out * mask
+        sum_output = masked_output.sum(dim=1)
+        seq_lengths = mask.sum(dim=1)
+        avg_output = sum_output / (seq_lengths + 1e-8)
+        
+        dropped = self.dropout(avg_output)
+        output = self.fc(dropped)
+        return output
+    
+    def get_config(self):
+        return {
+            'vocab_size': self.vocab_size,
+            'embedding_dim': self.embedding_dim,
+            'hidden_size': self.hidden_size,
+            'num_classes': self.num_classes,
+            'num_layers': self.num_layers,
+            'bidirectional': self.bidirectional
+        }
+
+
+class LSTMClassifier(nn.Module):
+    """LSTM para clasificacion de texto."""
+    
+    def __init__(self,
+                 vocab_size: int,
+                 embedding_dim: int,
+                 hidden_size: int,
+                 num_classes: int,
+                 num_layers: int = 1,
+                 dropout_rate: float = 0.3,
+                 recurrent_dropout: float = 0.0,
+                 padding_idx: int = 0,
+                 bidirectional: bool = False):
+        super(LSTMClassifier, self).__init__()
+        
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.hidden_size = hidden_size
+        self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.bidirectional = bidirectional
+        self.padding_idx = padding_idx
+        
+        self.embedding = nn.Embedding(
+            num_embeddings=vocab_size,
+            embedding_dim=embedding_dim,
+            padding_idx=padding_idx
+        )
+        
+        self.lstm = nn.LSTM(
+            input_size=embedding_dim,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=recurrent_dropout if num_layers > 1 else 0,
+            bidirectional=bidirectional
+        )
+        
+        self.dropout = nn.Dropout(dropout_rate)
+        
+        lstm_output_size = hidden_size * 2 if bidirectional else hidden_size
+        self.fc = nn.Linear(lstm_output_size, num_classes)
+        
+        self._initialize_weights()
+    
+    def _initialize_weights(self):
+        nn.init.uniform_(self.embedding.weight, -0.05, 0.05)
+        if self.padding_idx is not None:
+            with torch.no_grad():
+                self.embedding.weight[self.padding_idx].fill_(0)
+        nn.init.xavier_uniform_(self.fc.weight)
+        nn.init.constant_(self.fc.bias, 0)
+    
+    def forward(self, x):
+        embedded = self.embedding(x)
+        lstm_out, (hidden, cell) = self.lstm(embedded)
+        
+        if self.bidirectional:
+            hidden_forward = hidden[-2, :, :]
+            hidden_backward = hidden[-1, :, :]
+            last_hidden = torch.cat([hidden_forward, hidden_backward], dim=1)
+        else:
+            last_hidden = hidden[-1, :, :]
+        
+        dropped = self.dropout(last_hidden)
+        output = self.fc(dropped)
+        return output
+    
+    def get_config(self):
+        return {
+            'vocab_size': self.vocab_size,
+            'embedding_dim': self.embedding_dim,
+            'hidden_size': self.hidden_size,
+            'num_classes': self.num_classes,
+            'num_layers': self.num_layers,
+            'bidirectional': self.bidirectional
+        }
+
+
+class GRUClassifier(nn.Module):
+    """GRU para clasificacion de texto."""
+    
+    def __init__(self,
+                 vocab_size: int,
+                 embedding_dim: int,
+                 hidden_size: int,
+                 num_classes: int,
+                 num_layers: int = 1,
+                 dropout_rate: float = 0.3,
+                 recurrent_dropout: float = 0.0,
+                 padding_idx: int = 0,
+                 bidirectional: bool = False):
+        super(GRUClassifier, self).__init__()
+        
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.hidden_size = hidden_size
+        self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.bidirectional = bidirectional
+        self.padding_idx = padding_idx
+        
+        self.embedding = nn.Embedding(
+            num_embeddings=vocab_size,
+            embedding_dim=embedding_dim,
+            padding_idx=padding_idx
+        )
+        
+        self.gru = nn.GRU(
+            input_size=embedding_dim,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=recurrent_dropout if num_layers > 1 else 0,
+            bidirectional=bidirectional
+        )
+        
+        self.dropout = nn.Dropout(dropout_rate)
+        
+        gru_output_size = hidden_size * 2 if bidirectional else hidden_size
+        self.fc = nn.Linear(gru_output_size, num_classes)
+        
+        self._initialize_weights()
+    
+    def _initialize_weights(self):
+        nn.init.uniform_(self.embedding.weight, -0.05, 0.05)
+        if self.padding_idx is not None:
+            with torch.no_grad():
+                self.embedding.weight[self.padding_idx].fill_(0)
+        nn.init.xavier_uniform_(self.fc.weight)
+        nn.init.constant_(self.fc.bias, 0)
+    
+    def forward(self, x):
+        embedded = self.embedding(x)
+        gru_out, hidden = self.gru(embedded)
+        
+        if self.bidirectional:
+            hidden_forward = hidden[-2, :, :]
+            hidden_backward = hidden[-1, :, :]
+            last_hidden = torch.cat([hidden_forward, hidden_backward], dim=1)
+        else:
+            last_hidden = hidden[-1, :, :]
+        
+        dropped = self.dropout(last_hidden)
+        output = self.fc(dropped)
+        return output
+    
+    def get_config(self):
+        return {
+            'vocab_size': self.vocab_size,
+            'embedding_dim': self.embedding_dim,
+            'hidden_size': self.hidden_size,
+            'num_classes': self.num_classes,
+            'num_layers': self.num_layers,
+            'bidirectional': self.bidirectional
+        }

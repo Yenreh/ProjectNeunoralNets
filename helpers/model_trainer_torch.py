@@ -46,6 +46,7 @@ class ModelTrainerTorch:
                    patience: int = 10,
                    model_name: str = "mlp_model",
                    scheduler=None,
+                   clip_grad_norm: float = None,
                    verbose: bool = True) -> Dict:
         """
         Entrena un modelo PyTorch con early stopping.
@@ -60,6 +61,7 @@ class ModelTrainerTorch:
             patience (int): Paciencia para early stopping
             model_name (str): Nombre para guardar el modelo
             scheduler: Learning rate scheduler (opcional)
+            clip_grad_norm (float): Valor máximo para gradient clipping (None para desactivar)
             verbose (bool): Mostrar progreso
             
         Returns:
@@ -72,6 +74,9 @@ class ModelTrainerTorch:
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f"Parámetros totales: {total_params:,}")
         print(f"Parámetros entrenables: {trainable_params:,}")
+        
+        if clip_grad_norm is not None:
+            print(f"Gradient clipping activado: max_norm={clip_grad_norm}")
         
         # Mover modelo al dispositivo
         model = model.to(self.device)
@@ -114,6 +119,11 @@ class ModelTrainerTorch:
                 
                 # Backward pass
                 loss.backward()
+                
+                # Gradient clipping (útil para RNN)
+                if clip_grad_norm is not None:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_norm)
+                
                 optimizer.step()
                 
                 # Estadísticas
