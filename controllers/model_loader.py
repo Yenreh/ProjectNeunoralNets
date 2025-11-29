@@ -120,6 +120,21 @@ def _build_architecture_info(config):
     if "hidden_layers" in config:
         return config["hidden_layers"]
     
+    # Para modelos Transformer
+    if "transformer" in model_type:
+        arch_parts = []
+        if "embedding_dim" in config:
+            arch_parts.append(f"D:{config['embedding_dim']}")
+        if "num_heads" in config:
+            arch_parts.append(f"H:{config['num_heads']}")
+        if "num_layers" in config:
+            arch_parts.append(f"L:{config['num_layers']}")
+        if "dim_feedforward" in config:
+            arch_parts.append(f"FF:{config['dim_feedforward']}")
+        if "pooling" in config:
+            arch_parts.append(f"P:{config['pooling']}")
+        return arch_parts if arch_parts else []
+    
     # Para modelos RNN/LSTM/GRU
     if any(x in model_type for x in ["lstm", "gru", "rnn"]):
         arch_parts = []

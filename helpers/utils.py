@@ -460,7 +460,8 @@ def load_model_components_torch(
         MLPWithEmbedding,
         SimpleRNNClassifier,
         LSTMClassifier,
-        GRUClassifier
+        GRUClassifier,
+        TransformerClassifier
     )
 
     try:
@@ -480,6 +481,7 @@ def load_model_components_torch(
         
         # Detectar tipo de modelo por nombre
         model_name_lower = model_name.lower()
+        is_transformer = "transformer" in model_name_lower
         is_lstm = "lstm" in model_name_lower
         is_gru = "gru" in model_name_lower
         is_rnn = "rnn" in model_name_lower and not is_lstm and not is_gru
@@ -511,7 +513,37 @@ def load_model_components_torch(
                 print(f"Vocabulario cargado, vocab_size: {vocab_size}")
 
         # Determinar tipo de modelo y crear instancia
-        if is_recurrent:
+        if is_transformer:
+            # Modelo Transformer
+            if not vocab_size:
+                vocab_size = model_config.get("vocab_size", 50000)
+                print(f"Usando vocab_size del config: {vocab_size}")
+            
+            embedding_dim = model_config.get("embedding_dim", 256)
+            num_classes = model_config.get("num_classes", 5)
+            num_heads = model_config.get("num_heads", 8)
+            num_layers = model_config.get("num_layers", 4)
+            dim_feedforward = model_config.get("dim_feedforward", 512)
+            dropout_rate = model_config.get("dropout_rate", 0.1)
+            max_length = model_config.get("max_length", 200)
+            pooling = model_config.get("pooling", "cls")
+            
+            print(f"Detectado modelo Transformer")
+            model = TransformerClassifier(
+                vocab_size=vocab_size,
+                embedding_dim=embedding_dim,
+                num_classes=num_classes,
+                num_heads=num_heads,
+                num_layers=num_layers,
+                dim_feedforward=dim_feedforward,
+                dropout_rate=dropout_rate,
+                max_length=max_length,
+                padding_idx=0,
+                pooling=pooling
+            )
+            components["vocab_size"] = vocab_size
+            
+        elif is_recurrent:
             # Modelos recurrentes: RNN, LSTM, GRU
             if not vocab_size:
                 vocab_size = model_config.get("vocab_size", 50000)

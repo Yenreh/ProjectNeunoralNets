@@ -5,6 +5,7 @@ Proyecto Redes Neuronales 2025-II - Universidad Del Valle
 Definiciones de arquitecturas de modelos para la Parte 2 (PyTorch).
 """
 
+import math
 import torch
 import torch.nn as nn
 
@@ -383,6 +384,203 @@ class LSTMClassifier(nn.Module):
             'num_classes': self.num_classes,
             'num_layers': self.num_layers,
             'bidirectional': self.bidirectional
+        }
+
+
+class PositionalEncoding(nn.Module):
+    """Positional Encoding para Transformer."""
+    
+    def __init__(self, d_model: int, max_len: int = 5000, dropout: float = 0.1):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+        
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)  # [1, max_len, d_model]
+        
+        self.register_buffer('pe', pe)
+    
+    def forward(self, x):
+        """
+        Args:
+            x: Tensor [batch_size, seq_len, d_model]
+        """
+        x = x + self.pe[:, :x.size(1), :]
+        return self.dropout(x)
+
+
+class TransformerClassifier(nn.Module):
+    """
+    Transformer Encoder para clasificacion de texto.
+    Usa solo la parte encoder del Transformer con pooling para clasificacion.
+    """
+    
+    def __init__(self,
+                 vocab_size: int,
+                 embedding_dim: int,
+                 num_classes: int,
+                 num_heads: int = 8,
+                 num_layers: int = 4,
+                 dim_feedforward: int = 512,
+                 dropout_rate: float = 0.1,
+                 max_length: int = 200,
+                 padding_idx: int = 0,
+                 pooling: str = 'cls'):
+        """
+        Args:
+            vocab_size: Tamano del vocabulario
+            embedding_dim: Dimension del embedding (debe ser divisible por num_heads)
+            num_classes: Numero de clases de salida
+            num_heads: Numero de cabezas de atencion
+            num_layers: Numero de capas del encoder
+            dim_feedforward: Dimension de la capa feedforward
+            dropout_rate: Tasa de dropout
+            max_length: Longitud maxima de secuencia
+            padding_idx: Indice de padding
+            pooling: Tipo de pooling ('cls', 'mean', 'max')
+        """
+        super(TransformerClassifier, self).__init__()
+        
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.num_classes = num_classes
+        self.num_heads = num_heads
+        self.num_layers = num_layers
+        self.dim_feedforward = dim_feedforward
+        self.dropout_rate = dropout_rate
+        self.max_length = max_length
+        self.padding_idx = padding_idx
+        self.pooling = pooling
+        
+        # Token especial CLS
+        self.cls_token_id = vocab_size  # Usar indice fuera del vocab normal
+        
+        # Embedding con +1 para token CLS
+        self.embedding = nn.Embedding(
+            num_embeddings=vocab_size + 1,
+            embedding_dim=embedding_dim,
+            padding_idx=padding_idx
+        )
+        
+        # Positional encoding
+        self.pos_encoder = PositionalEncoding(
+            d_model=embedding_dim,
+            max_len=max_length + 1,  # +1 para CLS
+            dropout=dropout_rate
+        )
+        
+        # Transformer Encoder
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=embedding_dim,
+            nhead=num_heads,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout_rate,
+            activation='gelu',
+            batch_first=True,
+            norm_first=True
+        )
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layer=encoder_layer,
+            num_layers=num_layers,
+            enable_nested_tensor=False
+        )
+        
+        # Layer normalization antes del clasificador
+        self.layer_norm = nn.LayerNorm(embedding_dim)
+        
+        # Clasificador
+        self.dropout = nn.Dropout(dropout_rate)
+        self.classifier = nn.Linear(embedding_dim, num_classes)
+        
+        self._initialize_weights()
+    
+    def _initialize_weights(self):
+        """Inicializa pesos del modelo."""
+        nn.init.normal_(self.embedding.weight, mean=0, std=0.02)
+        if self.padding_idx is not None:
+            with torch.no_grad():
+                self.embedding.weight[self.padding_idx].fill_(0)
+        
+        nn.init.xavier_uniform_(self.classifier.weight)
+        nn.init.constant_(self.classifier.bias, 0)
+    
+    def forward(self, x, attention_mask=None):
+        """
+        Forward pass.
+        
+        Args:
+            x: Tensor de indices [batch_size, seq_length]
+            attention_mask: Mascara de padding opcional
+            
+        Returns:
+            Tensor de logits [batch_size, num_classes]
+        """
+        batch_size, seq_len = x.size()
+        device = x.device
+        
+        # Agregar token CLS al inicio
+        cls_tokens = torch.full((batch_size, 1), self.cls_token_id, dtype=torch.long, device=device)
+        x = torch.cat([cls_tokens, x], dim=1)  # [batch, seq_len+1]
+        
+        # Crear mascara de padding (True = ignorar)
+        if attention_mask is None:
+            # Crear mascara: padding_idx -> True (ignorar)
+            padding_mask = (x == self.padding_idx)
+            # CLS token nunca es padding
+            padding_mask[:, 0] = False
+        else:
+            padding_mask = attention_mask
+        
+        # Embedding + Positional Encoding
+        embedded = self.embedding(x) * math.sqrt(self.embedding_dim)
+        embedded = self.pos_encoder(embedded)
+        
+        # Transformer Encoder
+        encoded = self.transformer_encoder(
+            embedded,
+            src_key_padding_mask=padding_mask
+        )
+        
+        # Pooling
+        if self.pooling == 'cls':
+            # Usar representacion del token CLS
+            pooled = encoded[:, 0, :]
+        elif self.pooling == 'mean':
+            # Mean pooling ignorando padding
+            mask = (~padding_mask).unsqueeze(-1).float()
+            masked_output = encoded * mask
+            pooled = masked_output.sum(dim=1) / mask.sum(dim=1).clamp(min=1)
+        elif self.pooling == 'max':
+            # Max pooling
+            mask = (~padding_mask).unsqueeze(-1)
+            encoded = encoded.masked_fill(~mask, float('-inf'))
+            pooled = encoded.max(dim=1)[0]
+        else:
+            pooled = encoded[:, 0, :]
+        
+        # Clasificacion
+        pooled = self.layer_norm(pooled)
+        pooled = self.dropout(pooled)
+        logits = self.classifier(pooled)
+        
+        return logits
+    
+    def get_config(self):
+        """Retorna configuracion del modelo."""
+        return {
+            'vocab_size': self.vocab_size,
+            'embedding_dim': self.embedding_dim,
+            'num_classes': self.num_classes,
+            'num_heads': self.num_heads,
+            'num_layers': self.num_layers,
+            'dim_feedforward': self.dim_feedforward,
+            'dropout_rate': self.dropout_rate,
+            'max_length': self.max_length,
+            'pooling': self.pooling
         }
 
 
