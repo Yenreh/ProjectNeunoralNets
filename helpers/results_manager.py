@@ -66,7 +66,8 @@ class ResultsManager:
             int: ID del experimento guardado
         """
         # Añadir timestamp al experimento
-        experiment_data['timestamp'] = datetime.now().isoformat()
+        timestamp = datetime.now()
+        experiment_data['timestamp'] = timestamp.isoformat()
         
         # Cargar historial existente
         history_data = self.load_experiment_history()
@@ -82,7 +83,7 @@ class ResultsManager:
         with open(self.results_file, 'w', encoding='utf-8') as f:
             json.dump(history_data, f, indent=2, ensure_ascii=False)
         
-        print(f"Experiment {experiment_id} results saved to {self.results_file}")
+        print(f"Experiment {experiment_id} ({experiment_data.get('experiment_name', 'Unknown')}) saved to {self.results_file}")
         return experiment_id
     
     def load_experiment_history(self) -> Dict:

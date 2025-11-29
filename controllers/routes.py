@@ -50,19 +50,26 @@ def register_routes(app):
     @app.route("/model/<model_name>")
     def model_interface(model_name):
         """Interfaz de prueba para un modelo específico"""
-        available_models = load_available_models()
-        model_names = [m["name"] for m in available_models]
+        # Buscar modelo en todas las partes del proyecto
+        all_models = []
+        model_subdir = None
+        for part in ["project_part_1", "project_part_2", "project_part_3"]:
+            models = load_available_models(subdir=part)
+            for m in models:
+                all_models.append(m["name"])
+                if m["name"] == model_name:
+                    model_subdir = part
 
-        if model_name not in model_names:
+        if model_name not in all_models:
             return "Modelo no encontrado", 404
 
         stats = load_model_stats()
         model_stats = stats.get(model_name, {})
 
-        # Obtener framework del modelo
-        from .model_loader import MODEL_DIR
-
-        framework = get_model_framework(model_name, MODEL_DIR)
+        # Obtener framework del modelo usando el subdirectorio correcto
+        import os
+        model_dir = os.path.join("models", model_subdir) if model_subdir else "models/project_part_1"
+        framework = get_model_framework(model_name, model_dir)
         model_stats["framework"] = framework
 
         # Si no hay estadísticas, proporcionar valores por defecto

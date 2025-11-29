@@ -93,9 +93,7 @@ def load_model_stats():
                                 "language": exp.get("configuration", {}).get(
                                     "language_filter", "multi"
                                 ),
-                                "architecture": exp.get("configuration", {}).get(
-                                    "hidden_layers", []
-                                ),
+                                "architecture": _build_architecture_info(exp.get("configuration", {})),
                                 "model_type": exp.get("configuration", {}).get(
                                     "model_type", "Unknown"
                                 ),
@@ -112,6 +110,30 @@ def load_model_stats():
                     continue
 
     return stats
+
+
+def _build_architecture_info(config):
+    """Construye una representación de la arquitectura del modelo."""
+    model_type = config.get("model_type", "").lower()
+    
+    # Para modelos MLP
+    if "hidden_layers" in config:
+        return config["hidden_layers"]
+    
+    # Para modelos RNN/LSTM/GRU
+    if any(x in model_type for x in ["lstm", "gru", "rnn"]):
+        arch_parts = []
+        if "embedding_dim" in config:
+            arch_parts.append(f"Emb:{config['embedding_dim']}")
+        if "hidden_size" in config:
+            arch_parts.append(f"H:{config['hidden_size']}")
+        if "num_layers" in config:
+            arch_parts.append(f"L:{config['num_layers']}")
+        if config.get("bidirectional"):
+            arch_parts.append("Bi")
+        return arch_parts if arch_parts else []
+    
+    return []
 
 
 def clear_loaded_models():

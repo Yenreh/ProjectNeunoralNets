@@ -455,7 +455,13 @@ def load_model_components_torch(
         Dict: Diccionario con componentes cargados
     """
     import torch
-    from helpers.models import MLPClassifier, MLPWithEmbedding
+    from helpers.models import (
+        MLPClassifier, 
+        MLPWithEmbedding,
+        SimpleRNNClassifier,
+        LSTMClassifier,
+        GRUClassifier
+    )
 
     try:
         components = {}
@@ -469,8 +475,15 @@ def load_model_components_torch(
             print(f"Archivo del modelo no encontrado: {model_path}")
             return None
 
-        checkpoint = torch.load(model_path, map_location=device)
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
         model_config = checkpoint.get("model_config", {})
+        
+        # Detectar tipo de modelo por nombre
+        model_name_lower = model_name.lower()
+        is_lstm = "lstm" in model_name_lower
+        is_gru = "gru" in model_name_lower
+        is_rnn = "rnn" in model_name_lower and not is_lstm and not is_gru
+        is_recurrent = is_lstm or is_gru or is_rnn
 
         # Detectar tipo de modelo basado en archivos auxiliares
         tokenizer_path = os.path.join(model_dir, f"{model_name}_tokenizer.pkl")
@@ -481,43 +494,85 @@ def load_model_components_torch(
         has_vocab = os.path.exists(vocab_path)
         has_vectorizer = os.path.exists(vectorizer_path)
 
+        # Cargar tokenizer si existe (para modelos con embedding)
+        vocab_size = None
+        if has_tokenizer:
+            with open(tokenizer_path, "rb") as f:
+                tokenizer = pickle.load(f)
+                components["tokenizer"] = tokenizer
+                vocab_size = len(tokenizer.word_index) + 1
+                components["max_length"] = model_config.get("max_length", 200)
+                print(f"Tokenizer cargado, vocab_size: {vocab_size}")
+        elif has_vocab:
+            with open(vocab_path, "rb") as f:
+                vocab = pickle.load(f)
+                components["vocab"] = vocab
+                vocab_size = len(vocab)
+                print(f"Vocabulario cargado, vocab_size: {vocab_size}")
+
         # Determinar tipo de modelo y crear instancia
-        if has_tokenizer or has_vocab or "vocab_size" in model_config:
-            # Modelo con Embedding
-            print(f"Detectado modelo de Embedding")
-
-            # Cargar tokenizer o vocab para obtener vocab_size
-            if has_tokenizer:
-                with open(tokenizer_path, "rb") as f:
-                    tokenizer = pickle.load(f)
-                    components["tokenizer"] = tokenizer
-                    vocab_size = len(tokenizer.word_index) + 1
-                    components["max_length"] = 100  # Default, se puede ajustar
-                    print(f"Tokenizer cargado, vocab_size: {vocab_size}")
-            elif has_vocab:
-                with open(vocab_path, "rb") as f:
-                    vocab = pickle.load(f)
-                    components["vocab"] = vocab
-                    vocab_size = len(vocab)
-                    print(f"Vocabulario cargado, vocab_size: {vocab_size}")
-            else:
-                # Fallback: usar vocab_size del checkpoint
+        if is_recurrent:
+            # Modelos recurrentes: RNN, LSTM, GRU
+            if not vocab_size:
+                vocab_size = model_config.get("vocab_size", 50000)
+                print(f"Usando vocab_size del config: {vocab_size}")
+            
+            embedding_dim = model_config.get("embedding_dim", 256)
+            hidden_size = model_config.get("hidden_size", 256)
+            num_classes = model_config.get("num_classes", 5)
+            num_layers = model_config.get("num_layers", 2)
+            bidirectional = model_config.get("bidirectional", True)
+            dropout_rate = model_config.get("dropout_rate", 0.3)
+            
+            if is_lstm:
+                print(f"Detectado modelo LSTM")
+                model = LSTMClassifier(
+                    vocab_size=vocab_size,
+                    embedding_dim=embedding_dim,
+                    hidden_size=hidden_size,
+                    num_classes=num_classes,
+                    num_layers=num_layers,
+                    dropout_rate=dropout_rate,
+                    bidirectional=bidirectional,
+                    padding_idx=0
+                )
+            elif is_gru:
+                print(f"Detectado modelo GRU")
+                model = GRUClassifier(
+                    vocab_size=vocab_size,
+                    embedding_dim=embedding_dim,
+                    hidden_size=hidden_size,
+                    num_classes=num_classes,
+                    num_layers=num_layers,
+                    dropout_rate=dropout_rate,
+                    bidirectional=bidirectional,
+                    padding_idx=0
+                )
+            else:  # SimpleRNN
+                print(f"Detectado modelo SimpleRNN")
+                model = SimpleRNNClassifier(
+                    vocab_size=vocab_size,
+                    embedding_dim=embedding_dim,
+                    hidden_size=hidden_size,
+                    num_classes=num_classes,
+                    num_layers=num_layers,
+                    dropout_rate=dropout_rate,
+                    bidirectional=bidirectional,
+                    padding_idx=0
+                )
+            
+            components["vocab_size"] = vocab_size
+            
+        elif has_tokenizer or has_vocab or "vocab_size" in model_config:
+            # Modelo MLP con Embedding
+            print(f"Detectado modelo MLP con Embedding")
+            
+            if not vocab_size:
                 vocab_size = model_config.get("vocab_size", 5000)
-                print(
-                    f"⚠️  Tokenizer/vocab no encontrado, usando vocab_size del checkpoint: {vocab_size}"
-                )
-                print(
-                    f"   Nota: Las predicciones pueden no funcionar correctamente sin tokenizer"
-                )
-
-                # Crear un tokenizer dummy para compatibilidad
-                # El usuario necesitará proporcionar el tokenizer correcto o re-entrenar
                 components["tokenizer"] = None
                 components["max_length"] = model_config.get("max_length", 100)
                 components["vocab_size"] = vocab_size
 
-            # Crear modelo de embedding
-            # Intentar obtener configuración del checkpoint
             embedding_dim = model_config.get("embedding_dim", 300)
             hidden_layers = model_config.get("hidden_layers", [256, 128, 64])
             num_classes = model_config.get("num_classes", 5)
@@ -534,14 +589,12 @@ def load_model_components_torch(
             # Modelo BoW
             print(f"Detectado modelo BoW")
 
-            # Cargar vectorizador
             with open(vectorizer_path, "rb") as f:
                 vectorizer = pickle.load(f)
                 components["vectorizer"] = vectorizer
                 input_dim = len(vectorizer.vocabulary_)
                 print(f"Vectorizador cargado, input_dim: {input_dim}")
 
-            # Crear modelo BoW
             hidden_layers = model_config.get("hidden_layers", [256, 128, 64])
             num_classes = model_config.get("num_classes", 5)
 
