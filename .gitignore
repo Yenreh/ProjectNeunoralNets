@@ -217,6 +217,7 @@ output/*
 !output/project_part_1/experiment_history.json
 !output/project_part_2/experiment_history.json
 !output/project_part_3/experiment_history.json
+!output/project_part_4/experiment_history.json
 
 # Extra Data
 extra_data
