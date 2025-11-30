@@ -190,7 +190,7 @@ def load_model_and_preprocessor(model_name):
         model_dir = None
         framework = None
         
-        for subdir in ["project_part_1", "project_part_2", "project_part_3"]:
+        for subdir in ["project_part_1", "project_part_2", "project_part_3", "project_part_4"]:
             test_dir = os.path.join("models", subdir)
             test_framework = get_model_framework(model_name, test_dir)
             if test_framework:

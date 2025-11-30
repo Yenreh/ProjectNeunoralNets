@@ -15,7 +15,7 @@
 
 <div class="row g-4">
     <!-- Tarjeta MLP -->
-    <div class="col-lg-4 d-flex">
+    <div class="col-lg-3 col-md-6 d-flex">
         <div class="card h-100 shadow-sm w-100">
             <div class="card-header bg-primary text-white text-center">
                 <i class="fas fa-network-wired fa-3x mb-3"></i>
@@ -42,7 +42,7 @@
     </div>
 
     <!-- Tarjeta RNN sin Memoria -->
-    <div class="col-lg-4 d-flex">
+    <div class="col-lg-3 col-md-6 d-flex">
         <div class="card h-100 shadow-sm w-100">
             <div class="card-header bg-success text-white text-center">
                 <i class="fas fa-project-diagram fa-3x mb-3"></i>
@@ -69,7 +69,7 @@
     </div>
 
     <!-- Tarjeta RNN con Memoria -->
-    <div class="col-lg-4 d-flex">
+    <div class="col-lg-3 col-md-6 d-flex">
         <div class="card h-100 shadow-sm w-100">
             <div class="card-header bg-info text-white text-center">
                 <i class="fas fa-brain fa-3x mb-3"></i>
@@ -90,6 +90,33 @@
             <div class="card-footer">
                 <a href="{{ url_for('lstm_models') }}" class="btn btn-info w-100">
                     <i class="fas fa-arrow-right"></i> Ver Modelos LSTM/GRU
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta Transformer -->
+    <div class="col-lg-3 col-md-6 d-flex">
+        <div class="card h-100 shadow-sm w-100">
+            <div class="card-header bg-warning text-dark text-center">
+                <i class="fas fa-bolt fa-3x mb-3"></i>
+                <h3 class="card-title mb-0">Transformer</h3>
+                <small>Mecanismos de Atención</small>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <p class="text-muted flex-grow-1">
+                    Arquitectura basada completamente en mecanismos de self-attention sin recurrencia. 
+                    Estado del arte en NLP con procesamiento paralelo y captura de relaciones globales.
+                </p>
+                <ul class="list-unstyled mb-3">
+                    <li><i class="fas fa-check text-success"></i> Self-attention</li>
+                    <li><i class="fas fa-check text-success"></i> Multi-head attention</li>
+                    <li><i class="fas fa-check text-success"></i> Paralelización completa</li>
+                </ul>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('transformer_models') }}" class="btn btn-warning w-100">
+                    <i class="fas fa-arrow-right"></i> Ver Modelos Transformer
                 </a>
             </div>
         </div>

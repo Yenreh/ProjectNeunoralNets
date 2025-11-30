@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "macros/model_card.html" import render_model_card %}
+
+{% block title %}Modelos Transformer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">
+            <i class="bi bi-lightning-charge"></i> 
+            Modelos Transformer
+        </h1>
+        <p class="lead">Arquitectura basada en mecanismos de atención para capturar relaciones globales en el texto.</p>
+    </div>
+</div>
+
+{% if models %}
+<div class="row">
+    {% for model in models %}
+        {{ render_model_card(model, stats, 'warning', 'Probar Modelo', 'model_interface') }}
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info" role="alert">
+    <i class="fas fa-info-circle"></i>
+    No se encontraron modelos Transformer en el directorio <code>models/project_part_4/</code>. 
+    Esta sección estará disponible cuando entrenes modelos Transformer.
+</div>
+{% endif %}
+
+{# <div class="row mt-5">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5><i class="fas fa-info-circle"></i> Información sobre Transformers</h5>
+            </div>
+            <div class="card-body">
+                <p>Los modelos Transformer son arquitecturas basadas completamente en mecanismos de atención, sin usar recurrencia ni convolución.</p>
+                <ul>
+                    <li><strong>Self-Attention:</strong> Captura relaciones entre todas las palabras del texto simultáneamente</li>
+                    <li><strong>Multi-Head Attention:</strong> Atiende a diferentes aspectos del texto en paralelo</li>
+                    <li><strong>Paralelización:</strong> Entrenamiento completamente paralelo, mucho más rápido que RNN</li>
+                    <li><strong>Ventaja:</strong> Captura dependencias de largo alcance sin degradación</li>
+                    <li><strong>Uso:</strong> Estado del arte en procesamiento de lenguaje natural</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div> #}
+{% endblock %}

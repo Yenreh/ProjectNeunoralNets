@@ -47,13 +47,20 @@ def register_routes(app):
         stats = load_model_stats()
         return render_template("lstm_models.html", models=models, stats=stats)
 
+    @app.route("/transformer")
+    def transformer_models():
+        """Página de modelos Transformer - Parte 4"""
+        models = load_available_models(subdir="project_part_4")
+        stats = load_model_stats()
+        return render_template("transformer_models.html", models=models, stats=stats)
+
     @app.route("/model/<model_name>")
     def model_interface(model_name):
         """Interfaz de prueba para un modelo específico"""
         # Buscar modelo en todas las partes del proyecto
         all_models = []
         model_subdir = None
-        for part in ["project_part_1", "project_part_2", "project_part_3"]:
+        for part in ["project_part_1", "project_part_2", "project_part_3", "project_part_4"]:
             models = load_available_models(subdir=part)
             for m in models:
                 all_models.append(m["name"])
@@ -133,7 +140,7 @@ def register_routes(app):
         all_models = []
         stats = load_model_stats()
         
-        for part in ["project_part_1", "project_part_2", "project_part_3"]:
+        for part in ["project_part_1", "project_part_2", "project_part_3", "project_part_4"]:
             models = load_available_models(subdir=part)
             for model in models:
                 model_name = model["name"]
