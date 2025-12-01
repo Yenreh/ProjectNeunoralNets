@@ -37,6 +37,7 @@ dependencies:
       - torchvision>=0.24.1
       - tensorflow>=2.19.0
       - keras>=3.11.0
+      - Keras-Preprocessing>=1.1.2
 
       # NLP Libraries
       - nltk>=3.9.0
