@@ -318,7 +318,7 @@ footer {
 }
 
 .card-title {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: bold;
 }
 
@@ -370,7 +370,7 @@ footer {
 }
 
 .model-stats .fw-bold {
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 /* Altura uniforme para tarjetas de modelos */

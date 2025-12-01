@@ -30,7 +30,12 @@ def get_model_framework(model_name, model_dir):
 
 
 def load_available_models(subdir="project_part_1"):
-    """Carga la lista de modelos disponibles desde el directorio models/<subdir>"""
+    """Carga la lista de modelos disponibles desde el directorio models/<subdir>
+    Ordena por fecha (del nombre del archivo) de más reciente a más antiguo
+    """
+    import re
+    from datetime import datetime
+    
     models = []
     model_dir = os.path.join("models", subdir)
     if os.path.exists(model_dir):
@@ -40,7 +45,30 @@ def load_available_models(subdir="project_part_1"):
             ):
                 model_name = file.replace(".h5", "").replace(".pth", "")
                 framework = get_model_framework(model_name, model_dir)
-                models.append({"name": model_name, "framework": framework})
+                
+                # Extraer timestamp del nombre (formato: YYYYMMDD_HHMMSS)
+                timestamp_match = re.search(r'(\d{8}_\d{6})', model_name)
+                if timestamp_match:
+                    try:
+                        timestamp = datetime.strptime(timestamp_match.group(1), '%Y%m%d_%H%M%S')
+                    except ValueError:
+                        timestamp = datetime.min
+                else:
+                    timestamp = datetime.min
+                
+                models.append({
+                    "name": model_name, 
+                    "framework": framework,
+                    "timestamp": timestamp
+                })
+    
+    # Ordenar por timestamp de más reciente a más antiguo
+    models.sort(key=lambda x: x["timestamp"], reverse=True)
+    
+    # Remover timestamp del diccionario (solo se usó para ordenar)
+    for model in models:
+        del model["timestamp"]
+    
     return models
 
 
