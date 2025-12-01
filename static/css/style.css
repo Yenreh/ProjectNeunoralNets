@@ -614,4 +614,7 @@ footer {
     .display-4 {
         font-size: 2rem;
     }
+    .nav-item{
+        width: 100%;    
+    }
 }
