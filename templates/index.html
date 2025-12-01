@@ -23,14 +23,11 @@
                 <small>Perceptrón Multicapa</small>
             </div>
             <div class="card-body d-flex flex-column">
-                <p class="text-muted flex-grow-1">
-                    Redes neuronales feedforward con capas densas completamente conectadas. 
-                    Arquitectura simple pero efectiva para clasificación de texto usando representaciones BoW o embeddings.
-                </p>
                 <ul class="list-unstyled mb-3">
-                    <li><i class="fas fa-check text-success"></i> Capas densas</li>
-                    <li><i class="fas fa-check text-success"></i> Bag of Words</li>
-                    <li><i class="fas fa-check text-success"></i> Word Embeddings</li>
+                    <li><i class="fas fa-check text-success"></i> Bag of Words (sparse)</li>
+                    <li><i class="fas fa-check text-success"></i> Word Embeddings (dense)</li>
+                    <li><i class="fas fa-check text-success"></i> Capas ocultas configurables</li>
+                    <li><i class="fas fa-check text-success"></i> TensorFlow + PyTorch</li>
                 </ul>
             </div>
             <div class="card-footer">
@@ -50,14 +47,11 @@
                 <small>Redes Recurrentes Simples</small>
             </div>
             <div class="card-body d-flex flex-column">
-                <p class="text-muted flex-grow-1">
-                    Redes neuronales recurrentes básicas que procesan secuencias manteniendo un estado oculto. 
-                    Capturan el orden de las palabras y dependencias a corto plazo en el texto.
-                </p>
                 <ul class="list-unstyled mb-3">
-                    <li><i class="fas fa-check text-success"></i> Procesamiento secuencial</li>
-                    <li><i class="fas fa-check text-success"></i> Estado oculto</li>
-                    <li><i class="fas fa-check text-success"></i> Contexto local</li>
+                    <li><i class="fas fa-check text-success"></i> Embeddings entrenables</li>
+                    <li><i class="fas fa-check text-success"></i> Arquitectura bidireccional</li>
+                    <li><i class="fas fa-check text-success"></i> Múltiples capas apiladas</li>
+                    <li><i class="fas fa-check text-success"></i> PyTorch</li>
                 </ul>
             </div>
             <div class="card-footer">
@@ -77,14 +71,11 @@
                 <small>RNN con Memoria</small>
             </div>
             <div class="card-body d-flex flex-column">
-                <p class="text-muted flex-grow-1">
-                    Arquitecturas avanzadas con mecanismos de memoria a largo plazo (LSTM) o puertas simplificadas (GRU). 
-                    Excelentes para capturar dependencias complejas y contexto distante.
-                </p>
                 <ul class="list-unstyled mb-3">
-                    <li><i class="fas fa-check text-success"></i> Memoria a largo plazo</li>
-                    <li><i class="fas fa-check text-success"></i> Mecanismos de puertas</li>
-                    <li><i class="fas fa-check text-success"></i> Contexto global</li>
+                    <li><i class="fas fa-check text-success"></i> LSTM con celdas de memoria</li>
+                    <li><i class="fas fa-check text-success"></i> GRU con puertas simplificadas</li>
+                    <li><i class="fas fa-check text-success"></i> Arquitectura bidireccional</li>
+                    <li><i class="fas fa-check text-success"></i> Gradient clipping</li>
                 </ul>
             </div>
             <div class="card-footer">
@@ -104,14 +95,11 @@
                 <small>Mecanismos de Atención</small>
             </div>
             <div class="card-body d-flex flex-column">
-                <p class="text-muted flex-grow-1">
-                    Arquitectura basada completamente en mecanismos de self-attention sin recurrencia. 
-                    Estado del arte en NLP con procesamiento paralelo y captura de relaciones globales.
-                </p>
                 <ul class="list-unstyled mb-3">
-                    <li><i class="fas fa-check text-success"></i> Self-attention</li>
-                    <li><i class="fas fa-check text-success"></i> Multi-head attention</li>
-                    <li><i class="fas fa-check text-success"></i> Paralelización completa</li>
+                    <li><i class="fas fa-check text-success"></i> Encoder-only architecture</li>
+                    <li><i class="fas fa-check text-success"></i> Multi-head self-attention</li>
+                    <li><i class="fas fa-check text-success"></i> Embeddings preentrenados (GloVe)</li>
+                    <li><i class="fas fa-check text-success"></i> Learning rate warmup</li>
                 </ul>
             </div>
             <div class="card-footer">
@@ -134,7 +122,7 @@
                 <div class="row mt-3">
                     <div class="col-md-4">
                         <h6><i class="fas fa-database text-primary"></i> Dataset</h6>
-                        <p class="small text-muted">200,000 reseñas de productos etiquetadas con estrellas</p>
+                        <p class="small text-muted">200,000 reseñas en inglés de productos etiquetadas con estrellas</p>
                     </div>
                     <div class="col-md-4">
                         <h6><i class="fas fa-cogs text-success"></i> Frameworks</h6>
