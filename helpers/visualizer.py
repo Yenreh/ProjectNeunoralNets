@@ -35,19 +35,31 @@ class Visualizer:
             save_path (str, optional): Ruta para guardar el gráfico
             framework (str): 'tensorflow' o 'pytorch' para adaptar keys
         """
-        fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-        
         # Determinar las keys según el framework
         if framework == "pytorch":
             train_acc_key = 'train_accuracy'
             val_acc_key = 'val_accuracy'
             train_loss_key = 'train_loss'
             val_loss_key = 'val_loss'
+            train_f1_key = 'train_f1_macro'
+            val_f1_key = 'val_f1_macro'
         else:  # tensorflow
             train_acc_key = 'accuracy'
             val_acc_key = 'val_accuracy'
             train_loss_key = 'loss'
             val_loss_key = 'val_loss'
+            train_f1_key = 'train_f1_macro'
+            val_f1_key = 'val_f1_macro'
+        
+        # Verificar si tenemos métricas F1
+        has_f1 = train_f1_key in history and val_f1_key in history
+        
+        # Crear subplots según si tenemos F1 o no
+        if has_f1:
+            fig, axes = plt.subplots(1, 3, figsize=(20, 5))
+        else:
+            fig, axes = plt.subplots(1, 2, figsize=(15, 5))
+            axes = [axes[0], axes[1]]  # Para compatibilidad con código siguiente
         
         # Graficar precisión
         if train_acc_key in history and val_acc_key in history:
@@ -67,6 +79,16 @@ class Visualizer:
         axes[1].set_ylabel('Pérdida')
         axes[1].legend()
         axes[1].grid(True, alpha=0.3)
+        
+        # Graficar F1 Macro si está disponible
+        if has_f1:
+            axes[2].plot(history[train_f1_key], label='F1-Macro Entrenamiento', linewidth=2)
+            axes[2].plot(history[val_f1_key], label='F1-Macro Validación', linewidth=2)
+            axes[2].set_title(f'{model_name} - F1-Macro')
+            axes[2].set_xlabel('Época')
+            axes[2].set_ylabel('F1-Macro')
+            axes[2].legend()
+            axes[2].grid(True, alpha=0.3)
         
         plt.tight_layout()
         

@@ -13,6 +13,7 @@ import numpy as np
 from datetime import datetime
 from typing import Dict, Optional
 from tqdm import tqdm
+from sklearn.metrics import f1_score, classification_report
 
 
 class ModelTrainerTorch:
@@ -85,12 +86,15 @@ class ModelTrainerTorch:
         history = {
             'train_loss': [],
             'train_accuracy': [],
+            'train_f1_macro': [],
             'val_loss': [],
-            'val_accuracy': []
+            'val_accuracy': [],
+            'val_f1_macro': []
         }
         
         best_val_loss = float('inf')
         best_val_accuracy = 0.0
+        best_val_f1_macro = 0.0  # Métrica principal para guardar modelo
         epochs_without_improvement = 0
         best_model_state = None
         
@@ -103,6 +107,8 @@ class ModelTrainerTorch:
             train_loss = 0.0
             train_correct = 0
             train_total = 0
+            train_all_preds = []
+            train_all_labels = []
             
             if verbose:
                 train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]")
@@ -132,6 +138,10 @@ class ModelTrainerTorch:
                 train_total += labels.size(0)
                 train_correct += (predicted == labels).sum().item()
                 
+                # Guardar predicciones para F1
+                train_all_preds.extend(predicted.cpu().numpy())
+                train_all_labels.extend(labels.cpu().numpy())
+                
                 if verbose and hasattr(train_pbar, 'set_postfix'):
                     train_pbar.set_postfix({
                         'loss': f'{loss.item():.4f}',
@@ -140,12 +150,15 @@ class ModelTrainerTorch:
             
             train_loss /= len(train_loader)
             train_accuracy = train_correct / train_total
+            train_f1_macro = f1_score(train_all_labels, train_all_preds, average='macro', zero_division=0)
             
             # Validación
             model.eval()
             val_loss = 0.0
             val_correct = 0
             val_total = 0
+            val_all_preds = []
+            val_all_labels = []
             
             with torch.no_grad():
                 if verbose:
@@ -164,6 +177,10 @@ class ModelTrainerTorch:
                     val_total += labels.size(0)
                     val_correct += (predicted == labels).sum().item()
                     
+                    # Guardar predicciones para F1
+                    val_all_preds.extend(predicted.cpu().numpy())
+                    val_all_labels.extend(labels.cpu().numpy())
+                    
                     if verbose and hasattr(val_pbar, 'set_postfix'):
                         val_pbar.set_postfix({
                             'loss': f'{loss.item():.4f}',
@@ -172,17 +189,20 @@ class ModelTrainerTorch:
             
             val_loss /= len(val_loader)
             val_accuracy = val_correct / val_total
+            val_f1_macro = f1_score(val_all_labels, val_all_preds, average='macro', zero_division=0)
             
             # Guardar en historial
             history['train_loss'].append(train_loss)
             history['train_accuracy'].append(train_accuracy)
+            history['train_f1_macro'].append(train_f1_macro)
             history['val_loss'].append(val_loss)
             history['val_accuracy'].append(val_accuracy)
+            history['val_f1_macro'].append(val_f1_macro)
             
             # Imprimir resumen de época
             print(f"\nEpoch {epoch+1}/{epochs}:")
-            print(f"  Train Loss: {train_loss:.4f}, Train Acc: {train_accuracy:.4f}")
-            print(f"  Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}")
+            print(f"  Train Loss: {train_loss:.4f}, Train Acc: {train_accuracy:.4f}, Train F1-Macro: {train_f1_macro:.4f}")
+            print(f"  Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}, Val F1-Macro: {val_f1_macro:.4f}")
             
             # Learning rate scheduler
             if scheduler is not None:
@@ -192,13 +212,14 @@ class ModelTrainerTorch:
                     scheduler.step()
                 print(f"  Learning Rate: {optimizer.param_groups[0]['lr']:.6f}")
             
-            # Early stopping check
-            if val_loss < best_val_loss:
+            # Early stopping check - AHORA BASADO EN F1 MACRO
+            if val_f1_macro > best_val_f1_macro:
+                best_val_f1_macro = val_f1_macro
                 best_val_loss = val_loss
                 best_val_accuracy = val_accuracy
                 epochs_without_improvement = 0
                 best_model_state = model.state_dict().copy()
-                print(f"  ✓ Mejor modelo guardado (Val Loss: {val_loss:.4f})")
+                print(f"  ✓ Mejor modelo guardado (Val F1-Macro: {val_f1_macro:.4f})")
             else:
                 epochs_without_improvement += 1
                 print(f"  Épocas sin mejora: {epochs_without_improvement}/{patience}")
@@ -223,6 +244,7 @@ class ModelTrainerTorch:
             'optimizer_state_dict': optimizer.state_dict(),
             'best_val_loss': best_val_loss,
             'best_val_accuracy': best_val_accuracy,
+            'best_val_f1_macro': best_val_f1_macro,
             'history': history,
         }, model_path)
         print(f"Modelo guardado en: {model_path}")
@@ -234,10 +256,13 @@ class ModelTrainerTorch:
             'model_path': model_path,
             'best_val_loss': best_val_loss,
             'best_val_accuracy': best_val_accuracy,
+            'best_val_f1_macro': best_val_f1_macro,
             'final_train_loss': history['train_loss'][-1],
             'final_train_accuracy': history['train_accuracy'][-1],
+            'final_train_f1_macro': history['train_f1_macro'][-1],
             'final_val_loss': history['val_loss'][-1],
             'final_val_accuracy': history['val_accuracy'][-1],
+            'final_val_f1_macro': history['val_f1_macro'][-1],
         }
     
     def evaluate_model(self,
@@ -253,7 +278,7 @@ class ModelTrainerTorch:
             criterion: Función de pérdida
             
         Returns:
-            Dict: Métricas de evaluación
+            Dict: Métricas de evaluación incluyendo F1 macro
         """
         print("\nEvaluando modelo en conjunto de prueba...")
         
@@ -279,13 +304,20 @@ class ModelTrainerTorch:
         
         test_loss /= len(test_loader)
         test_accuracy = np.mean(np.array(all_preds) == np.array(all_labels))
+        test_f1_macro = f1_score(all_labels, all_preds, average='macro', zero_division=0)
         
         print(f"Test Loss: {test_loss:.4f}")
         print(f"Test Accuracy: {test_accuracy:.4f}")
+        print(f"Test F1-Macro: {test_f1_macro:.4f}")
+        
+        # Mostrar classification report
+        print("\nClassification Report:")
+        print(classification_report(all_labels, all_preds, zero_division=0))
         
         return {
             'test_loss': test_loss,
             'test_accuracy': test_accuracy,
+            'test_f1_macro': test_f1_macro,
             'predictions': np.array(all_preds),
             'labels': np.array(all_labels)
         }
