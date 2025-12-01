@@ -1,240 +1,212 @@
 # Proyecto Redes Neuronales
 
 **Universidad Del Valle - Redes Neuronales 2025-II**  
-**Autor:** Herney Eduardo Quintero Trochez  
+**Autor:** Herney Eduardo Quintero Trochez
 
 ## Descripción
 
-Sistema de clasificación de texto para análisis de sentimientos en reviews de Amazon (1-5 estrellas) usando diferentes arquitecturas de redes neuronales: MLP y RNN.
+Sistema de clasificación de texto para análisis de sentimientos en reviews de Amazon (1-5 estrellas) usando diferentes arquitecturas de redes neuronales
 
-## Entregas del Proyecto
+## Notebooks Principales
 
-### 📦 Entrega 1: Perceptrón Multicapa (MLP)
-Implementación de modelos MLP con BoW y Embeddings usando TensorFlow/Keras y PyTorch.
+### Entrega 1: Perceptrón Multicapa (MLP)
 
-**Notebooks:**
-- `mlp_tf_bow.ipynb` - MLP con Bag of Words (TensorFlow)
-- `mlp_tf_embedding.ipynb` - MLP con Embeddings (TensorFlow)
+- `mlp_tf_bow.ipynb` - MLP con Bag of Words (TensorFlow) (Legacy)
+- `mlp_tf_embedding.ipynb` - MLP con Embeddings (TensorFlow) (Legacy)
 - `mlp_pytorch_bow.ipynb` - MLP con Bag of Words (PyTorch)
 - `mlp_pytorch_embedding.ipynb` - MLP con Embeddings (PyTorch)
 
-### 🔄 Entrega 2: Redes Neuronales Recurrentes (RNN)
-Implementación de modelos RNN sin memoria y con memoria usando PyTorch.
+### Entrega 2: Redes Neuronales Recurrentes (RNN)
 
-**Notebooks:**
 - `rnn_pytorch.ipynb` - SimpleRNN (RNN sin memoria)
 - `lstm_pytorch.ipynb` - LSTM (RNN con memoria a largo plazo)
 - `gru_pytorch.ipynb` - GRU (RNN con memoria eficiente)
+- `transformer_pytorch.ipynb` - Transformer (Atención multi-cabeza)
+- `transformer_pytorch_pretrain.ipynb` - Transformer con modelo preentrenado
 - `rnn_comparison.ipynb` - Comparación y análisis de modelos RNN
 
-📄 **Documentación completa:** Ver [ENTREGA2_README.md](ENTREGA2_README.md)
+## Instalación
+
+### Opción 1: Conda (Recomendado)
+
+**Con soporte GPU (CUDA):**
+
+```bash
+# Crear ambiente desde archivo
+conda env create -f environment-gpu.yml
+
+# Activar ambiente
+conda activate rn_project
+```
+
+**Solo CPU (sin GPU - para demo/inferencia):**
+
+```bash
+# Crear ambiente desde archivo
+conda env create -f environment-cpu.yml
+
+# Activar ambiente
+conda activate rn_project
+```
+
+### Opción 2: pip + venv
+
+**Con soporte GPU (CUDA):**
+
+```bash
+# Crear ambiente virtual
+python -m venv venv
+
+# Activar ambiente
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+# Instalar dependencias GPU
+pip install -r requirements-gpu.txt
+```
+
+**Solo CPU (sin GPU - para demo/inferencia):**
+
+```bash
+# Crear ambiente virtual
+python -m venv venv
+
+# Activar ambiente
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+# Instalar dependencias CPU
+pip install -r requirements-cpu.txt
+```
+
+## Ejecución
+
+### Ejecutar Notebooks
+
+```bash
+# Iniciar Jupyter
+jupyter notebook
+
+# O JupyterLab
+jupyter lab
+```
+
+Luego abrir cualquiera de los notebooks listados arriba.
+
+### Ejecutar Demo Web (app.py)
+
+```bash
+# Ejecutar con configuración por defecto (puerto 5000)
+python app.py
+
+# Ejecutar en puerto personalizado
+python app.py --port 8080
+
+# Ejecutar en host específico
+python app.py --host 127.0.0.1 --port 5000
+```
+
+La aplicación estará disponible en `http://localhost:5000` (o el puerto especificado).
+
+## Requisitos de Datos
+
+### Carpeta `data/`
+
+La carpeta `data/` debe contener los siguientes archivos CSV:
+
+- `train.csv` - Datos de entrenamiento
+- `validation.csv` - Datos de validación
+- `test.csv` - Datos de prueba
+
+**Columnas requeridas en los CSV:**
+
+- `review_body` (str): Texto del review
+- `review_title` (str): Título del review (opcional)
+- `stars` (int): Clasificación de 1-5 estrellas
+- `language` (str): Idioma del review (ej: 'es', 'en')
+
+**Fuente del dataset:** [Amazon Reviews Multi-language](https://www.kaggle.com/datasets/mexwell/amazon-reviews-multi)
+
+## Requisitos de Modelos (para app.py)
+
+### Carpeta `models/`
+
+La aplicación web carga modelos desde las siguientes carpetas:
+
+- `models/project_part_1/` - Modelos MLP (Entrega 1)
+- `models/project_part_2/` - Modelos RNN (Entrega 2)
+- `models/project_part_3/` - Modelos LSTM/GRU (Entrega 2)
+- `models/project_part_4/` - Modelos Transformer (Entrega 2)
+
+**Archivos requeridos por modelo:**
+
+Cada modelo necesita 3 archivos con el mismo prefijo:
+
+1. **Archivo del modelo:**
+   - `.pth` (PyTorch) o `.h5` (TensorFlow/Keras)
+2. **Label encoder:**
+   - `_label_encoder.pkl`
+3. **Preprocesador de texto:**
+   - `_tokenizer.pkl` (para modelos con embeddings)
+   - `_vectorizer.pkl` (para modelos con Bag of Words)
+
+**Ejemplo:**
+
+```
+models/project_part_1/
+├── MLP_BoW_Torch_20251130_135449.pth
+├── MLP_BoW_Torch_20251130_135449_label_encoder.pkl
+└── MLP_BoW_Torch_20251130_135449_vectorizer.pkl
+```
+
+Los modelos se generan automáticamente al ejecutar los notebooks de entrenamiento.
 
 ## Estructura del Proyecto
 
 ```
 ProjectNeunoralNets/
-├── data/                          # Datasets CSV
-│   ├── train.csv
-│   ├── validation.csv
-│   └── test.csv
-│
+├── data/                          # Datasets CSV (train, validation, test)
+│   ├── glove/                     # │
+Embeddings GloVe
 ├── models/                        # Modelos entrenados
-│   ├── project_part_1/           # Modelos MLP (Entrega 1)
-│   └── project_part_2/           # Modelos RNN (Entrega 2)
-│
-├── output/                        # Resultados y gráficos
-│   ├── project_part_1/           # Resultados Entrega 1
-│   └── project_part_2/           # Resultados Entrega 2
-│
+│   ├── project_part_1/           # Modelos MLP
+│   └── project_part_2/           # Modelos RNN
+│   └── project_part_3/           # Modelos LSTM/GRU
+│   └── project_part_4/           # Modelos Transformer
+├── output/                        # Resultados
 ├── helpers/                       # Módulos de ayuda
-│   ├── models.py                 # Arquitecturas (MLP, RNN, LSTM, GRU)
-│   ├── model_trainer_torch.py    # Entrenamiento PyTorch
-│   ├── model_trainer_tf.py       # Entrenamiento TensorFlow
-│   ├── data_loader_torch.py      # Carga de datos PyTorch
-│   ├── data_loader.py            # Carga de datos TensorFlow
-│   ├── results_manager.py        # Gestión de resultados
-│   ├── visualizer.py             # Visualizaciones
-│   └── utils.py                  # Utilidades
-│
-├── controllers/                   # Flask app (Web UI)
-│   ├── routes.py
-│   ├── prediction_controller.py
-│   └── ...
-│
+├── controllers/                   # Controladores Flask
 ├── static/                        # Assets web
 ├── templates/                     # Templates HTML
-│
-├── Notebooks:
-├── mlp_tf_bow.ipynb              # MLP BoW (TensorFlow)
-├── mlp_tf_embedding.ipynb        # MLP Embedding (TensorFlow)
-├── mlp_pytorch_bow.ipynb         # MLP BoW (PyTorch)
-├── mlp_pytorch_embedding.ipynb   # MLP Embedding (PyTorch)
-├── rnn_pytorch.ipynb             # SimpleRNN (Entrega 2)
-├── lstm_pytorch.ipynb            # LSTM (Entrega 2)
-├── gru_pytorch.ipynb             # GRU (Entrega 2)
-├── rnn_comparison.ipynb          # Comparación RNN
-│
-├── app.py                         # Flask app principal
-├── requirements.txt               # Dependencias Python
-├── environment.yml                # Ambiente Conda
-├── README.md                      # Este archivo
-└── ENTREGA2_README.md            # Documentación Entrega 2
+├── *.ipynb                        # Notebooks de entrenamiento
+├── app.py                         # Aplicación web Flask
+├── requirements.txt               # Dependencias pip (GPU)
+├── requirements-cpu.txt           # Dependencias pip (CPU)
+├── environment.yml                # Ambiente Conda (GPU)
+└── environment-cpu.yml            # Ambiente Conda (CPU)
 ```
 
-## Instalación y Uso
+## Modelos Implementados
 
-### 1. Crear ambiente (recomendado)
-```bash
-# Opción 1: Conda
-conda env create -f environment.yml
-conda activate rn_project
+### MLP (Perceptrón Multicapa)
 
-# Opción 2: pip + venv
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# o
-venv\Scripts\activate  # Windows
-pip install -r requirements.txt
-```
+- **TensorFlow/Keras:** MLP con BoW y Embeddings
+- **PyTorch:** MLP con BoW y Embeddings
 
-### 2. Ejecutar Notebooks
+### RNN (Redes Recurrentes)
 
-**Para Entrega 1 (MLP):**
-```bash
-# TensorFlow
-jupyter notebook mlp_tf_bow.ipynb
-jupyter notebook mlp_tf_embedding.ipynb
+- **SimpleRNN:** RNN básica sin memoria
+- **LSTM:** Long Short-Term Memory con compuertas
+- **GRU:** Gated Recurrent Unit (más eficiente)
 
-# PyTorch
-jupyter notebook mlp_pytorch_bow.ipynb
-jupyter notebook mlp_pytorch_embedding.ipynb
-```
+### Transformer
 
-**Para Entrega 2 (RNN):**
-```bash
-# Entrenar modelos
-jupyter notebook rnn_pytorch.ipynb    # SimpleRNN
-jupyter notebook lstm_pytorch.ipynb   # LSTM
-jupyter notebook gru_pytorch.ipynb    # GRU
+- **Transformer:** Redes Neuronales Recurrentes con atención multi-cabeza
 
-# Comparar resultados
-jupyter notebook rnn_comparison.ipynb
-```
+## Tecnologías
 
-### 3. Ejecutar Web App (opcional)
-```bash
-python app.py
-# Abrir http://localhost:5000
-```
-
-### 4. Datos requeridos
-Los archivos CSV en `data/` deben tener:
-- `review_body`: Texto del review  
-- `review_title`: Título del review (opcional)
-- `stars`: Clasificación (1-5 estrellas)
-- `language`: Idioma del review
-
-## Características Principales
-
-### Modelos Implementados
-
-#### Entrega 1: MLP (Perceptrón Multicapa)
-- **TensorFlow/Keras:**
-  - MLP con Bag of Words (TF-IDF)
-  - MLP con Embeddings + GlobalAveragePooling
-- **PyTorch:**
-  - MLP con Bag of Words
-  - MLP con Embeddings + Mean Pooling
-
-#### Entrega 2: RNN (Redes Recurrentes)
-- **SimpleRNN:** RNN sin memoria (baseline)
-  - Elman RNN básica
-  - Problemas con gradiente desvaneciente
-  
-- **LSTM:** Long Short-Term Memory
-  - 3 compuertas (input, forget, output)
-  - Cell state para memoria a largo plazo
-  - Bidireccional con 2 capas apiladas
-  
-- **GRU:** Gated Recurrent Unit
-  - 2 compuertas (update, reset)
-  - Más eficiente que LSTM (~25% menos parámetros)
-  - Rendimiento similar a LSTM
-
-### Funcionalidades
-- ✅ Preprocesamiento automático de texto (tokenización, padding)
-- ✅ Filtrado por idioma configurable
-- ✅ Soporte CPU y GPU automático
-- ✅ Tracking de experimentos con historial JSON
-- ✅ Visualización automática (curvas de aprendizaje, matrices de confusión)
-- ✅ Evaluación completa con métricas detalladas
-- ✅ Early stopping y learning rate scheduling
-- ✅ Comparación automática de modelos
-
-### Archivos Generados
-```
-models/
-├── project_part_1/               # Modelos MLP
-│   ├── MLP_BoW_TF.h5
-│   ├── MLP_Embedding_TF.h5
-│   ├── MLP_BoW_Torch.pth
-│   └── MLP_Embedding_Torch.pth
-└── project_part_2/               # Modelos RNN
-    ├── SimpleRNN_Torch.pth
-    ├── LSTM_Torch.pth
-    └── GRU_Torch.pth
-
-output/
-├── project_part_1/               # Resultados Entrega 1
-│   ├── *_results.json
-│   └── *.png
-└── project_part_2/               # Resultados Entrega 2
-    ├── *_results.json
-    ├── comparison_report.txt
-    └── *.png
-```
-
-## Comparación de Arquitecturas
-
-| Modelo | Tipo | Memoria | Parámetros | Velocidad | Uso Recomendado |
-|--------|------|---------|------------|-----------|-----------------|
-| **MLP BoW** | Feedforward | No | Bajo | Muy rápido | Baseline simple |
-| **MLP Embedding** | Feedforward | No | Medio | Rápido | Texto sin secuencia |
-| **SimpleRNN** | Recurrente | Corto plazo | Bajo | Rápido | Baseline RNN |
-| **GRU** | Recurrente | Largo plazo | Medio | Medio | Default para RNN |
-| **LSTM** | Recurrente | Largo plazo | Alto | Más lento | Tareas complejas |
-
-## Tecnologías Utilizadas
-
-- **Python 3.10+**
-- **Deep Learning:**
-  - PyTorch 2.x
-  - TensorFlow 2.x / Keras
-- **Procesamiento:**
-  - NumPy
-  - Pandas
-  - scikit-learn
-- **Visualización:**
-  - Matplotlib
-  - Seaborn
-- **Web (opcional):**
-  - Flask
-  - Bootstrap
-
-## Dataset
-
-**Amazon Reviews Multi-language**
-- Reviews de productos en múltiples idiomas
-- 5 clases: 1-5 estrellas
-- Splits: train (80%), validation (10%), test (10%)
-- Fuente: https://www.kaggle.com/datasets/mexwell/amazon-reviews-multi
-
-## Licencia
-
-Este proyecto es parte del curso de Redes Neuronales de la Universidad Del Valle y tiene propósitos educativos.
-
-## Contacto
-
-Herney Eduardo Quintero Trochez  
-Universidad Del Valle  
-Escuela de Ingeniería de Sistemas y Computación
+- Python 3.10+
+- PyTorch 2.x / TensorFlow 2.x
+- NumPy, Pandas, scikit-learn
+- Matplotlib, Seaborn
+- Flask, Bootstrap

@@ -1,0 +1,44 @@
+# Core ML and Deep Learning Frameworks (GPU/CUDA)
+# PyTorch with CUDA - use: pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu130
+--extra-index-url https://download.pytorch.org/whl/cu130
+torch>=2.9.1
+torchaudio>=2.9.1
+torchvision>=0.24.1
+tensorflow>=2.19.0
+keras>=3.11.0
+h5py>=3.15.0
+
+# Data Processing
+numpy>=1.26.0,<2.0.0
+pandas>=2.3.0
+scikit-learn>=1.7.0
+
+# NLP Libraries
+nltk>=3.9.0
+transformers>=4.57.0
+tokenizers>=0.22.0
+sentence-transformers>=5.1.0
+huggingface-hub>=0.36.0
+
+# Data Visualization
+matplotlib>=3.10.0
+seaborn>=0.13.0
+
+# Web Framework
+flask>=3.1.0
+werkzeug>=3.1.0
+
+# Development and Jupyter
+ipykernel>=7.0.0
+jupyter>=1.0.0
+jupyterlab>=4.0.0
+
+# Additional ML Tools
+datasets>=4.4.0
+accelerate>=1.11.0
+safetensors>=0.6.0
+
+# Utilities
+tqdm>=4.67.0
+pyyaml>=6.0.0
+python-dotenv>=1.2.0

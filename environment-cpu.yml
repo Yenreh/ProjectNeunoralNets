@@ -1,0 +1,52 @@
+name: rn_project_cpu
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # Python
+  - python=3.10
+
+  # System libraries
+  - numpy>=1.26.0,<2.0.0
+  - scipy>=1.15.0
+  - pandas>=2.3.0
+  - scikit-learn>=1.7.0
+  - h5py>=3.15.0
+
+  # Jupyter and development (optional for demo)
+  - ipykernel
+
+  # Visualization (optional for demo)
+  - matplotlib>=3.10.0
+  - seaborn>=0.13.0
+
+  # Utilities
+  - pyyaml>=6.0.0
+  - tqdm>=4.67.0
+
+  # pip packages (ML frameworks CPU-only and specialized libraries)
+  - pip
+  - pip:
+      # Deep Learning Frameworks (CPU-only for demo/inference)
+      - torch>=2.9.1
+      - torchaudio>=2.9.1
+      - torchvision>=0.24.1
+      - tensorflow>=2.19.0
+      - keras>=3.11.0
+
+      # NLP Libraries (required for model loading and tokenization)
+      - nltk>=3.9.0
+      - transformers>=4.57.0
+      - tokenizers>=0.22.0
+      - sentence-transformers>=5.1.0
+      - huggingface-hub>=0.36.0
+
+      # Web Framework (required for app.py)
+      - flask>=3.1.0
+      - werkzeug>=3.1.0
+
+      # Additional ML Tools (required for model loading)
+      - safetensors>=0.6.0
+
+      # Utilities
+      - python-dotenv>=1.2.0
