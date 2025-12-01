@@ -166,8 +166,7 @@ Los modelos se generan automáticamente al ejecutar los notebooks de entrenamien
 ```
 ProjectNeunoralNets/
 ├── data/                          # Datasets CSV (train, validation, test)
-│   ├── glove/                     # │
-Embeddings GloVe
+│   └── glove/                     # Embeddings GloVe
 ├── models/                        # Modelos entrenados
 │   ├── project_part_1/           # Modelos MLP
 │   └── project_part_2/           # Modelos RNN
