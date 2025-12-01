@@ -1,0 +1,257 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{float}
+
+\geometry{margin=2.5cm}
+
+% Configurar altura del encabezado
+\setlength{\headheight}{15pt}
+
+% Configuración para código Python
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red},
+    backgroundcolor=\color{gray!5},
+    frame=single,
+    breaklines=true,
+    captionpos=b,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    showstringspaces=false
+}
+
+\lstset{style=pythonstyle}
+
+% Configuración del encabezado
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Proyecto Práctico - Redes Neuronales}
+\fancyhead[R]{\thepage}
+\fancyfoot[C]{Universidad del Valle - Redes Neuronales 2025-II}
+
+\title{
+    \textbf{Proyecto Práctico - Redes Neuronales} \\
+    \large{Clasificación de Texto Multietiqueta con} \\
+    \large{RNNs, LSTMs, GRUs y Transformers}
+}
+
+\author{
+    \textbf{Herney Eduardo Quintero Trochez} \\
+    \textit{201528556} \\
+    Universidad del Valle del Valle \\
+    Facultad de Ingeniería \\
+    Programa de Ingeniería de Sistemas
+}
+
+\date{Diciembre 2025}
+
+\begin{document}
+
+\maketitle
+
+\newpage
+
+% \tableofcontents
+
+\newpage
+
+\section{Introducción}
+
+El presente informe documenta el desarrollo del Proyecto Práctico de la asignatura Redes Neuronales, correspondiente al período académico 2025-II. El objetivo principal es analizar el desempeño de distintas arquitecturas de red neuronal (MLP, RNN, LSTM, GRU y Transformers) para resolver un problema de clasificación de texto con múltiples etiquetas, utilizando el dataset de reseñas de Amazon.
+
+\subsection{Objetivos}
+
+\subsubsection{Objetivo General}
+Analizar y comparar el rendimiento de diferentes arquitecturas de redes neuronales en la tarea de clasificación de sentimientos en reseñas de productos, identificando las fortalezas y debilidades de cada enfoque.
+
+\subsubsection{Objetivos Específicos}
+\begin{itemize}
+    \item Implementar y evaluar modelos basados en Perceptrón Multicapa (MLP) con representaciones BoW y Embeddings.
+    \item Implementar y evaluar modelos secuenciales: RNN, LSTM y GRU.
+    \item Implementar y evaluar modelos basados en la arquitectura Transformer.
+    \item Comparar el rendimiento de los modelos utilizando métricas como Accuracy y F1-Score.
+    \item Analizar el impacto del uso de embeddings preentrenados (GloVe) frente a embeddings aprendidos desde cero.
+\end{itemize}
+
+\section{Metodología}
+
+\subsection{Dataset}
+Se utilizó el \textbf{Amazon Reviews Dataset}, que contiene reseñas de productos clasificadas de 1 a 5 estrellas. Para este proyecto, se trabajó con un subconjunto balanceado de 200,000 reseñas en inglés.
+\begin{itemize}
+    \item \textbf{Entrenamiento:} 200,000 ejemplos.
+    \item \textbf{Validación:} 5,000 ejemplos.
+    \item \textbf{Prueba:} 5,000 ejemplos.
+    \item \textbf{Clases:} 5 clases balanceadas (20\% cada una).
+\end{itemize}
+
+\subsection{Arquitecturas Implementadas}
+
+\subsubsection{Perceptrón Multicapa (MLP)}
+Se implementaron dos variantes de MLP:
+\begin{itemize}
+    \item \textbf{MLP con Bag of Words (BoW):} Utiliza un vector de frecuencias de las 5,000 palabras más comunes. La arquitectura consta de una capa oculta de 512 neuronas con activación ReLU y Dropout (0.5).
+    \item \textbf{MLP con Embeddings:} Utiliza una capa de Embedding (dim=300) seguida de un promediado global (Global Average Pooling) y capas densas.
+\end{itemize}
+
+\subsubsection{Redes Recurrentes (RNN, LSTM, GRU)}
+Se exploraron modelos secuenciales para capturar el contexto del texto:
+\begin{itemize}
+    \item \textbf{SimpleRNN:} Red recurrente básica bidireccional.
+    \item \textbf{LSTM (Long Short-Term Memory):} Capaz de capturar dependencias a largo plazo. Se usó una configuración bidireccional con 2 capas, hidden\_size=256 y dropout.
+    \item \textbf{GRU (Gated Recurrent Unit):} Similar a LSTM pero más eficiente. Se usó una configuración bidireccional con 2 capas, hidden\_size=128.
+\end{itemize}
+
+\subsubsection{Transformer Encoder}
+Se implementó un modelo basado en la arquitectura Transformer Encoder para clasificación de texto.
+\begin{itemize}
+    \item \textbf{Configuración Base:} 4 capas de encoder, 8 cabezas de atención, embedding\_dim=256, feedforward=512.
+    \item \textbf{Configuración Avanzada:} 6 capas, embedding\_dim=512.
+    \item \textbf{Embeddings Preentrenados:} Se experimentó con embeddings GloVe (200d) congelados y con fine-tuning.
+\end{itemize}
+
+\subsection{Configuración de Entrenamiento}
+Todos los modelos se entrenaron utilizando:
+\begin{itemize}
+    \item \textbf{Optimizador:} Adam o AdamW.
+    \item \textbf{Función de Pérdida:} CrossEntropyLoss.
+    \item \textbf{Early Stopping:} Para detener el entrenamiento si la pérdida de validación no mejora.
+    \item \textbf{Hardware:} Entrenamiento acelerado por GPU (NVIDIA GeForce RTX 30xx/50xx).
+\end{itemize}
+
+\section{Resultados y Análisis}
+
+\subsection{Perceptrón Multicapa (MLP)}
+
+Los modelos MLP sirvieron como línea base. El modelo basado en Bag of Words (BoW) alcanzó un accuracy cercano al 50\%, limitado por la pérdida de información secuencial. El uso de Embeddings mejoró ligeramente el rendimiento (52-55\%), pero aún mostró dificultades para capturar matices semánticos complejos.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{../output/project_part_1/MLP_BoW_Torch_training.png}
+\includegraphics[width=0.45\textwidth]{../output/project_part_1/MLP_Embedding_Torch_training.png}
+\caption{Curvas de entrenamiento para MLP BoW (izquierda) y MLP Embedding (derecha).}
+\end{figure}
+
+\subsection{Redes Recurrentes (RNN, LSTM, GRU)}
+
+Las arquitecturas recurrentes mostraron una mejora significativa respecto a los MLP.
+\begin{itemize}
+    \item \textbf{SimpleRNN:} Alcanzó un accuracy de ~60\%, pero sufrió de inestabilidad en el entrenamiento.
+    \item \textbf{GRU y LSTM:} Lograron los mejores resultados, con accuracies entre 61\% y 62\%. La capacidad de manejar dependencias a largo plazo permitió una mejor clasificación de reseñas complejas.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{../output/project_part_3/GRU_Torch_history.png}
+\includegraphics[width=0.45\textwidth]{../output/project_part_3/LSTM_Torch_history.png}
+\caption{Curvas de entrenamiento para GRU (izquierda) y LSTM (derecha).}
+\end{figure}
+
+\subsection{Transformer Encoder}
+
+El modelo Transformer Encoder alcanzó resultados competitivos (Accuracy ~61\%), similares a LSTM y GRU. Aunque su entrenamiento es más costoso computacionalmente, ofrece la ventaja de procesar secuencias en paralelo. El uso de embeddings GloVe no aportó mejoras significativas sobre los embeddings aprendidos desde cero, posiblemente debido al tamaño suficiente del dataset para aprender representaciones específicas del dominio.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{../output/project_part_4/Transformer_Torch_history.png}
+\caption{Curvas de entrenamiento para Transformer Encoder.}
+\end{figure}
+
+\subsection{Comparación Global}
+
+La siguiente tabla resume el rendimiento de los mejores modelos de cada familia en el conjunto de prueba:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Modelo} & \textbf{Accuracy Test} & \textbf{F1-Score Macro} \\
+\midrule
+MLP (BoW) & 0.50 & 0.50 \\
+MLP (Embedding) & 0.54 & 0.53 \\
+SimpleRNN & 0.60 & 0.59 \\
+LSTM Bidireccional & 0.61 & 0.61 \\
+GRU Bidireccional & \textbf{0.62} & \textbf{0.62} \\
+Transformer Encoder & 0.61 & 0.60 \\
+\bottomrule
+\end{tabular}
+\caption{Comparación de rendimiento en el conjunto de prueba.}
+\end{table}
+
+\subsection{Análisis de Errores}
+Se observó un patrón consistente en todas las arquitecturas: las clases extremas (1 y 5 estrellas) son clasificadas con mayor precisión (F1 ~0.70-0.75), mientras que las clases intermedias (2, 3 y 4 estrellas) presentan mayor confusión. Esto sugiere que el modelo distingue bien la polaridad general, pero le cuesta diferenciar la intensidad del sentimiento en reseñas moderadas.
+
+\section{Conclusiones}
+
+\subsection{Hallazgos Principales}
+
+\begin{enumerate}
+    \item \textbf{Superioridad de Modelos Secuenciales:} Los modelos RNN, LSTM y GRU superaron consistentemente a los modelos MLP (BoW y Embedding), demostrando la importancia de capturar la estructura secuencial del texto para el análisis de sentimientos.
+    
+    \item \textbf{Eficacia de GRU y LSTM:} Ambas arquitecturas alcanzaron resultados similares (~61-62\% accuracy), siendo GRU ligeramente más eficiente en términos computacionales. Esto las convierte en opciones sólidas para este tipo de tareas.
+    
+    \item \textbf{Desafío de las Clases Intermedias:} Todos los modelos mostraron un rendimiento inferior en las clases intermedias (2, 3 y 4 estrellas). Esto indica que la ambigüedad en reseñas moderadas es difícil de resolver solo con el texto, sugiriendo la necesidad de incorporar otras características o modelos más avanzados.
+    
+    \item \textbf{Transformers:} Aunque el Transformer Encoder es una arquitectura potente, en este dataset específico no superó significativamente a las RNNs bien ajustadas. Sin embargo, su capacidad de paralelización es una ventaja clave para datasets más grandes.
+\end{enumerate}
+
+\subsection{Trabajo Futuro}
+
+\begin{itemize}
+    \item \textbf{Modelos Preentrenados (BERT/RoBERTa):} Explorar el uso de modelos de lenguaje grandes (LLMs) con fine-tuning, que han demostrado estado del arte en tareas de clasificación de texto.
+    \item \textbf{Aumento de Datos:} Implementar técnicas de data augmentation para balancear mejor la dificultad de las clases intermedias.
+    \item \textbf{Análisis de Errores Profundo:} Realizar un análisis cualitativo más detallado de los errores de clasificación para entender mejor las limitaciones lingüísticas de los modelos.
+\end{itemize}
+
+\section{Referencias}
+
+\begin{thebibliography}{9}
+
+\bibitem{amazon_reviews}
+Keung, P., Lu, Y., Szarvas, G., \& Smith, N. A. (2020).
+The Multilingual Amazon Reviews Corpus.
+\textit{Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)}.
+\url{https://aclanthology.org/2020.emnlp-main.369/}
+
+\bibitem{pytorch}
+Paszke, A., et al. (2019).
+PyTorch: An Imperative Style, High-Performance Deep Learning Library.
+\textit{Advances in Neural Information Processing Systems 32}.
+\url{https://pytorch.org/}
+
+\bibitem{transformer}
+Vaswani, A., et al. (2017).
+Attention Is All You Need.
+\textit{Advances in Neural Information Processing Systems 30}.
+\url{https://arxiv.org/abs/1706.03762}
+
+\bibitem{lstm}
+Hochreiter, S., \& Schmidhuber, J. (1997).
+Long Short-Term Memory.
+\textit{Neural Computation}, 9(8), 1735-1780.
+
+\bibitem{gru}
+Cho, K., et al. (2014).
+Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation.
+\textit{arXiv preprint arXiv:1406.1078}.
+
+\end{thebibliography}
+
+\end{document}
