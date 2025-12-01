@@ -1,4 +1,4 @@
-name: rn_project_cpu
+name: rn_project
 channels:
   - conda-forge
   - defaults
