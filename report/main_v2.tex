@@ -1,0 +1,724 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\geometry{margin=2.5cm}
+
+% Configurar altura del encabezado
+\setlength{\headheight}{15pt}
+
+% Configuración para código Python
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red},
+    backgroundcolor=\color{gray!5},
+    frame=single,
+    breaklines=true,
+    captionpos=b,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    showstringspaces=false
+}
+
+\lstset{style=pythonstyle}
+
+% Configuración del encabezado
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Proyecto Práctico - Redes Neuronales}
+\fancyhead[R]{\thepage}
+\fancyfoot[C]{Universidad del Valle - Redes Neuronales 2025-II}
+
+\title{
+    \textbf{Proyecto Práctico - Redes Neuronales} \\
+    \large{Clasificación de Sentimientos en Reseñas de Amazon} \\
+    \large{con Arquitecturas MLP, RNN, LSTM, GRU y Transformer}
+}
+
+\author{
+    \textbf{Herney Eduardo Quintero Trochez} \\
+    \textit{Código: 201528556} \\[0.5em]
+    Universidad del Valle \\
+    Facultad de Ingeniería \\
+    Programa de Ingeniería de Sistemas
+}
+
+\date{Diciembre 2025}
+
+\begin{document}
+
+\maketitle
+
+\newpage
+
+% ============================================================================
+% RESUMEN
+% ============================================================================
+\begin{abstract}
+Este proyecto analiza el desempeño de cinco familias de arquitecturas de redes neuronales para clasificación de sentimientos en reseñas de productos de Amazon. Se trabajó con un subconjunto balanceado de 200,000 reseñas en inglés, clasificadas en cinco categorías (1 a 5 estrellas). Se implementaron y evaluaron modelos de Perceptrón Multicapa (MLP) con representaciones Bag-of-Words y Embeddings, redes recurrentes simples (SimpleRNN), redes con memoria (LSTM y GRU bidireccionales), y modelos basados en la arquitectura Transformer Encoder. Los experimentos se realizaron en PyTorch y TensorFlow utilizando GPUs NVIDIA. Los resultados muestran que los modelos secuenciales (GRU: 62.0\%, LSTM: 61.7\%) superan significativamente a los MLP (50-59\%), mientras que el Transformer alcanzó un 61.3\% de accuracy. Todos los modelos presentaron mayor dificultad para clasificar las clases intermedias (2-4 estrellas), logrando mejor precisión en las clases extremas (1 y 5 estrellas). El proyecto demuestra la importancia de capturar la estructura secuencial del texto para tareas de análisis de sentimientos.
+\end{abstract}
+
+\newpage
+
+% ============================================================================
+% TABLA DE CONTENIDOS
+% ============================================================================
+\tableofcontents
+
+\newpage
+
+% ============================================================================
+% LISTA DE FIGURAS
+% ============================================================================
+\listoffigures
+
+% ============================================================================
+% LISTA DE TABLAS
+% ============================================================================
+\listoftables
+
+\newpage
+
+% ============================================================================
+% 1. INTRODUCCIÓN
+% ============================================================================
+\section{Introducción}
+
+\subsection{Objetivos}
+
+\subsubsection{Objetivo General}
+Analizar y comparar el rendimiento de diferentes arquitecturas de redes neuronales en la tarea de clasificación de sentimientos en reseñas de productos, identificando las fortalezas y debilidades de cada enfoque para seleccionar la más adecuada según los requisitos del problema.
+
+\subsubsection{Objetivos Específicos}
+\begin{itemize}
+    \item Implementar y evaluar modelos de Perceptrón Multicapa (MLP) utilizando dos representaciones de texto: Bag-of-Words (BoW) y Embeddings aprendidos.
+    \item Implementar y evaluar modelos secuenciales: SimpleRNN, LSTM bidireccional y GRU bidireccional, comparando su capacidad para capturar dependencias temporales.
+    \item Implementar y evaluar modelos basados en la arquitectura Transformer Encoder, explorando configuraciones con embeddings aprendidos y preentrenados (GloVe).
+    \item Comparar el rendimiento de todos los modelos utilizando métricas estándar como Accuracy, F1-Score macro y matrices de confusión.
+    \item Analizar el comportamiento de los modelos por clase, identificando patrones de error y dificultades particulares.
+\end{itemize}
+
+% ============================================================================
+% 2. METODOLOGÍA
+% ============================================================================
+\section{Metodología}
+
+\subsection{Dataset: Amazon Reviews Multi}
+
+Para este proyecto se utilizó el \textbf{Amazon Reviews Multi Dataset} \cite{amazon_reviews}, un corpus de reseñas reales de productos disponible públicamente. Este dataset contiene reseñas en seis idiomas (inglés, japonés, alemán, francés, español y chino), cada una con una calificación de 1 a 5 estrellas.
+
+\subsubsection{Características del Dataset}
+\begin{itemize}
+    \item \textbf{Fuente:} Kaggle / ACL Anthology (EMNLP 2020)
+    \item \textbf{Idioma utilizado:} Inglés (filtrado de la colección multiidioma)
+    \item \textbf{Campos principales:}
+    \begin{itemize}
+        \item \texttt{review\_title}: Título de la reseña
+        \item \texttt{review\_body}: Cuerpo completo de la reseña
+        \item \texttt{stars}: Calificación de 1 a 5 estrellas (variable objetivo)
+        \item \texttt{language}: Idioma de la reseña
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Partición de Datos}
+
+El dataset se dividió en tres conjuntos de la siguiente manera:
+
+\begin{table}[H]
+\centering
+\caption{Distribución del dataset por conjuntos}
+\label{tab:dataset_split}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Conjunto} & \textbf{Muestras} & \textbf{Porcentaje} \\
+\midrule
+Entrenamiento & 200,000 & 95.2\% \\
+Validación & 5,000 & 2.4\% \\
+Prueba & 5,000 & 2.4\% \\
+\midrule
+\textbf{Total} & \textbf{210,000} & \textbf{100\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Distribución de Clases}
+
+El conjunto de entrenamiento presenta una distribución balanceada, con 40,000 muestras por clase:
+
+\begin{table}[H]
+\centering
+\caption{Distribución de clases en el conjunto de entrenamiento}
+\label{tab:class_distribution}
+\begin{tabular}{ccc}
+\toprule
+\textbf{Clase (Estrellas)} & \textbf{Muestras} & \textbf{Porcentaje} \\
+\midrule
+1 $\star$ & 40,000 & 20\% \\
+2 $\star$ & 40,000 & 20\% \\
+3 $\star$ & 40,000 & 20\% \\
+4 $\star$ & 40,000 & 20\% \\
+5 $\star$ & 40,000 & 20\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Preprocesamiento de Texto}
+
+Se implementaron dos estrategias de preprocesamiento según el tipo de modelo:
+
+\subsubsection{Preprocesamiento para MLP con Bag-of-Words}
+\begin{enumerate}
+    \item Combinación del título y cuerpo de la reseña en un solo texto
+    \item Vectorización TF-IDF con los siguientes parámetros:
+    \begin{itemize}
+        \item Vocabulario máximo: 5,000 términos
+        \item Frecuencia mínima de documento: 3
+        \item Frecuencia máxima de documento: 85\%
+    \end{itemize}
+    \item Resultado: matriz dispersa de 200,000 $\times$ 5,000
+\end{enumerate}
+
+\subsubsection{Preprocesamiento para Modelos Secuenciales y Transformer}
+\begin{enumerate}
+    \item Combinación del título y cuerpo de la reseña
+    \item Tokenización a nivel de palabra
+    \item Construcción de vocabulario (máximo 50,000 tokens)
+    \item Conversión a secuencias de índices
+    \item Padding/truncado a longitud fija (150-200 tokens según el modelo)
+    \item Resultado: tensor de secuencias de dimensión [batch\_size, max\_length]
+\end{enumerate}
+
+\subsection{Configuración de Entrenamiento}
+
+Todos los modelos fueron entrenados siguiendo prácticas estándar de deep learning:
+
+\begin{itemize}
+    \item \textbf{Optimizadores:} Adam para MLP/RNN/LSTM/GRU, AdamW para Transformer
+    \item \textbf{Función de pérdida:} CrossEntropyLoss (con pesos de clase opcionales)
+    \item \textbf{Early Stopping:} Detención temprana basada en la pérdida de validación (paciencia: 5-10 épocas)
+    \item \textbf{Learning Rate Scheduling:} ReduceLROnPlateau o warmup + decay lineal (Transformer)
+    \item \textbf{Gradient Clipping:} Norma máxima de gradientes entre 1.0 y 1.5
+    \item \textbf{Hardware:} GPUs NVIDIA GeForce RTX 3060 (12GB) y RTX 5070 (12GB)
+\end{itemize}
+
+\subsection{Métricas de Evaluación}
+
+Se utilizaron las siguientes métricas para evaluar el rendimiento de los modelos:
+
+\begin{itemize}
+    \item \textbf{Accuracy:} Proporción de predicciones correctas sobre el total.
+    \item \textbf{F1-Score Macro:} Promedio no ponderado del F1-Score por clase, adecuado para datasets balanceados.
+    \item \textbf{Precisión y Recall por clase:} Para analizar el comportamiento diferenciado en cada categoría de estrellas.
+    \item \textbf{Matriz de confusión:} Para visualizar patrones de error entre clases.
+\end{itemize}
+
+% ============================================================================
+% 3. ARQUITECTURAS IMPLEMENTADAS
+% ============================================================================
+\section{Arquitecturas de Modelos}
+
+\subsection{Perceptrón Multicapa (MLP)}
+
+Se implementaron dos variantes de MLP para establecer líneas base del problema: una con representación Bag-of-Words (TF-IDF) y otra con embeddings aprendidos.
+
+\subsubsection{MLP con Bag-of-Words (BoW)}
+
+Este modelo utiliza una representación TF-IDF del texto como entrada directa a una red fully-connected. La arquitectura consiste en una capa de entrada que recibe vectores TF-IDF de 5,000 dimensiones, seguida de tres capas ocultas (256, 128, 64 neuronas) con activación ReLU y Dropout de 0.3 entre cada capa, finalizando con una capa de salida Softmax de 5 clases.
+
+\subsubsection{MLP con Embeddings}
+
+Este modelo aprende representaciones densas de las palabras mediante una capa de Embedding de dimensión 300, seguida de un Global Average Pooling para obtener una representación fija del documento. Posteriormente, tres capas densas (256, 128, 64 neuronas) procesan esta representación hasta la capa de clasificación final.
+
+\subsubsection{Resumen de Experimentos MLP}
+
+\begin{table}[H]
+\centering
+\caption{Configuración de todos los experimentos MLP}
+\label{tab:mlp_all_config}
+\footnotesize
+\begin{tabular}{@{}lccccr@{}}
+\toprule
+\textbf{Experimento} & \textbf{Framework} & \textbf{Tipo} & \textbf{Emb.} & \textbf{Params} & \textbf{Ckpt} \\
+\midrule
+MLP\_BoW\_TF\_20250929 & TensorFlow & BoW & -- & 1.32M & val\_loss \\
+MLP\_BoW\_PT\_20251128 & PyTorch & BoW & -- & 2.60M & val\_loss \\
+MLP\_BoW\_PT\_20251130 & PyTorch & BoW & -- & 2.60M & F1-macro \\
+MLP\_Emb\_TF\_20250929 & TensorFlow & Emb & 300 & 14.84M & val\_loss \\
+MLP\_Emb\_PT\_20251128 & PyTorch & Emb & 300 & 14.92M & val\_loss \\
+MLP\_Emb\_PT\_20251130 & PyTorch & Emb & 300 & 14.68M & F1-macro \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Hiperparámetros comunes:} Capas ocultas [256, 128, 64], Dropout 0.3--0.5, LR 0.001--0.0005, Batch 512, Épocas 50, Patience 10.
+
+\subsection{Redes Neuronales Recurrentes}
+
+Se implementaron tres variantes de arquitecturas recurrentes en PyTorch: SimpleRNN, LSTM y GRU, todas bidireccionales.
+
+\subsubsection{SimpleRNN}
+
+Red recurrente básica bidireccional para capturar contexto secuencial.
+
+\subsubsection{LSTM (Long Short-Term Memory)}
+
+Las redes LSTM utilizan mecanismos de compuertas (input, forget, output) para capturar dependencias a largo plazo, resolviendo el problema del vanishing gradient.
+
+\subsubsection{GRU (Gated Recurrent Unit)}
+
+Las redes GRU son una simplificación de LSTM que combina las compuertas en una sola de ``update'', reduciendo la complejidad computacional.
+
+\subsubsection{Resumen de Experimentos Recurrentes}
+
+\begin{table}[H]
+\centering
+\caption{Configuración de todos los experimentos recurrentes}
+\label{tab:rnn_all_config}
+\footnotesize
+\begin{tabular}{@{}lccccccc@{}}
+\toprule
+\textbf{Experimento} & \textbf{Tipo} & \textbf{Emb} & \textbf{Hid} & \textbf{Cap} & \textbf{Bid} & \textbf{Params} & \textbf{Ckpt} \\
+\midrule
+SimpleRNN\_PT\_20251128 & RNN & 200 & 256 & 2 & Si & 10.3M & val\_loss \\
+SimpleRNN\_PT\_20251130 & RNN & 200 & 256 & 2 & Si & 10.3M & F1-macro \\
+LSTM\_PT\_20251128\_192500 & LSTM & 128 & 128 & 2 & Si & 3.2M & val\_loss \\
+LSTM\_PT\_20251128\_210359 & LSTM & 256 & 256 & 2 & Si & 15.0M & val\_loss \\
+LSTM\_PT\_20251130 & LSTM & 256 & 256 & 2 & Si & 15.0M & F1-macro \\
+GRU\_PT\_20251128\_182500 & GRU & 128 & 128 & 2 & Si & 3.1M & val\_loss \\
+GRU\_PT\_20251128\_212324 & GRU & 200 & 200 & 2 & Si & 10.9M & val\_loss \\
+GRU\_PT\_20251130 & GRU & 200 & 200 & 2 & Si & 10.9M & F1-macro \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Hiperparámetros comunes:} Dropout 0.3, LR 0.001, Batch 48--64, MaxLen 150--200, Gradient Clip 1.0, Patience 5.
+
+\subsection{Transformer Encoder}
+
+El modelo Transformer utiliza mecanismos de auto-atención (self-attention) para capturar relaciones entre todas las posiciones de la secuencia simultáneamente, permitiendo paralelización completa durante el entrenamiento.
+
+\subsubsection{Variantes Implementadas}
+
+Se exploraron múltiples configuraciones:
+\begin{itemize}
+    \item \textbf{Base:} d\_model=256, 8 cabezas, 4 capas, FFN=512, pooling CLS
+    \item \textbf{Grande:} d\_model=512, 8 cabezas, 6 capas, FFN=2048, pooling Mean
+    \item \textbf{GloVe:} Embeddings GloVe-200d congelados, 4 cabezas, 4 capas
+\end{itemize}
+
+\subsubsection{Resumen de Experimentos Transformer}
+
+\begin{table}[H]
+\centering
+\caption{Configuración de todos los experimentos Transformer}
+\label{tab:transformer_all_config}
+\footnotesize
+\begin{tabular}{@{}lcccccccc@{}}
+\toprule
+\textbf{Experimento} & \textbf{d\_m} & \textbf{H} & \textbf{L} & \textbf{FFN} & \textbf{Pool} & \textbf{LR} & \textbf{Params} & \textbf{Ckpt} \\
+\midrule
+Transf\_PT\_20251128 & 256 & 8 & 4 & 512 & CLS & 1e-4 & 14.5M & val\_loss \\
+Transf\_PT\_20251129 & 256 & 8 & 4 & 512 & CLS & 1e-4 & 14.5M & val\_loss \\
+Transf\_PT\_20251130\_01 & 512 & 8 & 6 & 2048 & Mean & 5e-5 & 43.6M & val\_loss \\
+Transf\_GloVe\_Frozen\_20251130 & 200 & 4 & 4 & 800 & CLS & 1e-4 & 11.6M & F1-macro \\
+Transf\_PT\_20251130\_17 & 256 & 8 & 4 & 512 & CLS & 1e-4 & 14.5M & F1-macro \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Hiperparámetros comunes:} MaxLen 200, Dropout 0.1, Gradient Clip 1.0, Warmup 1000--2000 steps, Patience 5--7.
+
+% ============================================================================
+% 4. RESULTADOS Y ANÁLISIS
+% ============================================================================
+\section{Resultados y Análisis}
+
+\subsection{Resultados por Familia de Modelos}
+
+\subsubsection{Perceptrón Multicapa (MLP)}
+
+Los modelos MLP sirvieron como línea base para el proyecto. La Tabla~\ref{tab:mlp_results} resume los resultados obtenidos.
+
+\begin{table}[H]
+\centering
+\caption{Resultados de modelos MLP en el conjunto de prueba}
+\label{tab:mlp_results}
+\footnotesize
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Modelo} & \textbf{Test Acc.} & \textbf{F1 Macro} & \textbf{Tiempo} & \textbf{Ckpt} \\
+\midrule
+MLP\_BoW\_TF\_20250929 & 53.1\% & 0.524 & 33s & val\_loss \\
+MLP\_BoW\_PT\_20251128 & 50.1\% & 0.502 & 28s & val\_loss \\
+MLP\_Emb\_TF\_20250929 & \textbf{59.1\%} & \textbf{0.588} & 289s & val\_loss \\
+MLP\_Emb\_PT\_20251128 & 58.9\% & 0.587 & 95s & val\_loss \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El modelo MLP con BoW alcanzó aproximadamente 50--53\% de accuracy, limitado por la pérdida de información secuencial inherente a la representación BoW. El uso de embeddings mejoró significativamente el rendimiento ($\sim$59\%), ya que permite capturar relaciones semánticas entre palabras.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_MLP_BoW_training.png}
+\caption{Curvas de entrenamiento MLP BoW (TensorFlow). Se observa overfitting temprano con divergencia train/val.}
+\label{fig:mlp_bow_training}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_MLP_Embedding_training.png}
+\caption{Curvas de entrenamiento MLP Embedding (TensorFlow). Mejor generalización que el modelo BoW.}
+\label{fig:mlp_emb_training}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_MLP_BoW_class_metrics.png}
+\caption{Métricas por clase MLP BoW. Las clases extremas (1 y 5 estrellas) muestran mejor rendimiento.}
+\label{fig:mlp_bow_class}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_MLP_Embedding_class_metrics.png}
+\caption{Métricas por clase MLP Embedding. Patrón similar al BoW pero con mejores valores absolutos.}
+\label{fig:mlp_emb_class}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/comparison_MLP_BoW_variants.png}
+\caption{Comparativa de variantes MLP BoW (TensorFlow vs PyTorch).}
+\label{fig:mlp_bow_variants}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/comparison_MLP_Embedding_variants.png}
+\caption{Comparativa de variantes MLP Embedding (TensorFlow vs PyTorch).}
+\label{fig:mlp_emb_variants}
+\end{figure}
+
+\subsubsection{Redes Recurrentes (SimpleRNN, LSTM, GRU)}
+
+Los modelos recurrentes mostraron mejoras consistentes sobre los MLP, demostrando la importancia de capturar la estructura secuencial del texto.
+
+\begin{table}[H]
+\centering
+\caption{Resultados de modelos recurrentes en el conjunto de prueba}
+\label{tab:rnn_results}
+\footnotesize
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Modelo} & \textbf{Test Acc.} & \textbf{F1 Macro} & \textbf{Ep.} & \textbf{Tiempo} & \textbf{Ckpt} \\
+\midrule
+SimpleRNN\_PT\_20251128 & 60.0\% & 0.595 & 27 & 12.5 min & val\_loss \\
+LSTM\_PT\_20251128\_210359 & 61.7\% & \textbf{0.619} & 19 & 24.7 min & val\_loss \\
+GRU\_PT\_20251128\_212324 & \textbf{62.0\%} & 0.614 & 15 & 13.8 min & val\_loss \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los resultados muestran que:
+\begin{itemize}
+    \item SimpleRNN alcanzó 60\% de accuracy, superando a los MLP pero mostrando cierta inestabilidad en el entrenamiento debido a problemas de vanishing gradients.
+    \item LSTM y GRU obtuvieron resultados similares ($\sim$61--62\%), siendo GRU ligeramente más eficiente computacionalmente (menos parámetros y menor tiempo de entrenamiento).
+    \item La bidireccionalidad resultó crucial, permitiendo al modelo considerar tanto el contexto anterior como el posterior de cada token.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_GRU_training.png}
+\caption{Curvas de entrenamiento GRU Bidireccional. Convergencia estable con early stopping efectivo.}
+\label{fig:gru_training}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_LSTM_training.png}
+\caption{Curvas de entrenamiento LSTM Bidireccional. Comportamiento similar al GRU.}
+\label{fig:lstm_training}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_SimpleRNN_training.png}
+\caption{Curvas de entrenamiento SimpleRNN Bidireccional. Se observa mayor inestabilidad en validación.}
+\label{fig:simplernn_training}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_SimpleRNN_class_metrics.png}
+\caption{Métricas por clase SimpleRNN Bidireccional.}
+\label{fig:simplernn_class}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_LSTM_class_metrics.png}
+\caption{Métricas por clase LSTM Bidireccional.}
+\label{fig:lstm_class}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_GRU_class_metrics.png}
+\caption{Métricas por clase GRU Bidireccional.}
+\label{fig:gru_class}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/comparison_SimpleRNN_variants.png}
+\caption{Comparativa de variantes SimpleRNN entrenadas.}
+\label{fig:simplernn_variants}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/comparison_LSTM_variants.png}
+\caption{Comparativa de variantes LSTM entrenadas.}
+\label{fig:lstm_variants}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/comparison_GRU_variants.png}
+\caption{Comparativa de todas las variantes GRU entrenadas.}
+\label{fig:gru_variants}
+\end{figure}
+
+\subsubsection{Transformer Encoder}
+
+\begin{table}[H]
+\centering
+\caption{Resultados de modelos Transformer en el conjunto de prueba}
+\label{tab:transformer_results}
+\footnotesize
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Configuracion} & \textbf{Test Acc.} & \textbf{F1 Macro} & \textbf{Ep.} & \textbf{Tiempo} & \textbf{Ckpt} \\
+\midrule
+Transf\_PT\_20251128 & 60.4\% & 0.600 & 30 & 1.08 h & val\_loss \\
+Transf\_PT\_20251129 & 60.5\% & 0.606 & 35 & 1.21 h & val\_loss \\
+Transf\_PT\_20251130\_01 & \textbf{61.3\%} & \textbf{0.607} & 45 & 6.55 h & val\_loss \\
+Transf\_GloVe\_Frozen\_20251130 & 60.0\% & 0.597 & 50 & 1.26 h & F1-macro \\
+Transf\_PT\_20251130\_17 & 61.0\% & 0.607 & 40 & 1.42 h & F1-macro \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Observaciones sobre el Transformer:
+\begin{itemize}
+    \item El modelo base (256d, 4 capas) alcanzó 60.4\% de accuracy, comparable a LSTM/GRU.
+    \item Aumentar el tamaño del modelo (512d, 6 capas) mejoró ligeramente el rendimiento (61.3\%), pero con un costo computacional significativamente mayor (6.5 horas vs. 1 hora).
+    \item Los embeddings GloVe congelados no aportaron mejoras (60.0\%), posiblemente porque el dataset es suficientemente grande para aprender representaciones específicas del dominio.
+    \item El cambio de criterio de checkpoint a F1-macro no produjo mejoras significativas.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_Transformer_training.png}
+\caption{Curvas de entrenamiento del Transformer Encoder (configuración grande). El warmup inicial es visible en las primeras épocas.}
+\label{fig:transformer_training}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/best_Transformer_class_metrics.png}
+\caption{Métricas por clase del mejor Transformer.}
+\label{fig:transformer_class}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/comparison_Transformer_variants.png}
+\caption{Comparativa de todas las configuraciones Transformer probadas.}
+\label{fig:transformer_variants}
+\end{figure}
+
+\subsection{Comparación Global de Modelos}
+
+La Tabla \ref{tab:global_comparison} presenta una comparación consolidada de los mejores modelos de cada familia:
+
+\begin{table}[H]
+\centering
+\caption{Comparacion global de los mejores modelos por familia}
+\label{tab:global_comparison}
+\footnotesize
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Modelo} & \textbf{Test Acc.} & \textbf{F1 Macro} & \textbf{Params.} & \textbf{Tiempo} & \textbf{Ckpt} \\
+\midrule
+MLP\_BoW\_TF\_20250929 & 53.12\% & 0.524 & 1.3M & 33s & val\_loss \\
+MLP\_Emb\_TF\_20250929 & 59.08\% & 0.588 & 14.8M & 289s & val\_loss \\
+SimpleRNN\_PT\_20251128 & 59.98\% & 0.595 & 10.3M & 12.5min & val\_loss \\
+LSTM\_PT\_20251128\_210359 & 61.72\% & \textbf{0.619} & 15.0M & 24.7min & val\_loss \\
+\textbf{GRU\_PT\_20251128\_212324} & \textbf{61.98\%} & 0.614 & 10.9M & 13.8min & val\_loss \\
+Transf\_PT\_20251130\_01 & 61.32\% & 0.607 & 43.6M & 6.5h & val\_loss \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Nota sobre el criterio de checkpoint:} Durante el entrenamiento, se guarda el mejor modelo según el criterio indicado. Los experimentos con criterio ``val\_loss'' guardan el checkpoint cuando la pérdida de validación alcanza su mínimo, mientras que los experimentos con criterio ``F1-macro'' lo hacen cuando el F1-Score macro de validación alcanza su máximo. Esto puede afectar el rendimiento final del modelo seleccionado.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{figures/global_best_comparison.png}
+\caption{Comparación de accuracy y F1-macro de todos los mejores modelos por familia. GRU obtiene el mejor rendimiento global.}
+\label{fig:global_comparison}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/global_training_time.png}
+\caption{Comparación de tiempos de entrenamiento. El Transformer requiere significativamente más tiempo debido a su mayor complejidad.}
+\label{fig:training_time}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/global_class_heatmap.png}
+\caption{Mapa de calor del F1-Score por clase para todos los modelos. Se observa el patrón consistente de mejor rendimiento en clases extremas.}
+\label{fig:class_heatmap}
+\end{figure}
+
+\subsection{Análisis por Clase}
+
+Un patrón consistente en todos los modelos es la diferencia de rendimiento entre clases. La Tabla \ref{tab:class_analysis} muestra el F1-Score por clase del mejor modelo (GRU\_PyTorch\_20251128\_212324):
+
+\begin{table}[H]
+\centering
+\caption{F1-Score por clase - Modelo GRU\_PyTorch\_20251128\_212324}
+\label{tab:class_analysis}
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Clase} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{Observación} \\
+\midrule
+1$\star$ & 0.648 & 0.776 & \textbf{0.706} & Alta recall \\
+2$\star$ & 0.540 & 0.508 & 0.524 & Confusión con 1$\star$ y 3$\star$ \\
+3$\star$ & 0.546 & 0.466 & 0.503 & Clase más difícil \\
+4$\star$ & 0.609 & 0.550 & 0.578 & Confusión con 3$\star$ y 5$\star$ \\
+5$\star$ & 0.722 & 0.799 & \textbf{0.758} & Mejor rendimiento \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Interpretación:} Las clases extremas (1 y 5 estrellas) son clasificadas con mayor precisión porque tienden a contener un lenguaje más polarizado y distintivo. Las clases intermedias (2, 3 y 4 estrellas) presentan mayor confusión porque:
+\begin{enumerate}
+    \item El lenguaje utilizado es más ambiguo y matizado.
+    \item Las diferencias entre una reseña de 3 estrellas y una de 4 estrellas pueden ser sutiles.
+    \item Existe una superposición semántica natural entre opiniones moderadas.
+\end{enumerate}
+
+\subsection{Análisis de Errores}
+
+Se observaron los siguientes patrones de error:
+
+\begin{itemize}
+    \item \textbf{Confusión entre clases adyacentes:} Los errores más comunes ocurren entre clases consecutivas (ej: predecir 4$\star$ cuando la etiqueta es 3$\star$).
+    \item \textbf{Sesgo hacia clases extremas:} Los modelos tienden a predecir con más confianza las clases 1$\star$ y 5$\star$.
+    \item \textbf{Dificultad con reseñas mixtas:} Reseñas que contienen tanto aspectos positivos como negativos son particularmente difíciles de clasificar.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/best_GRU_confusion_real.png}
+\caption{Matriz de confusión del modelo GRU. Se observa la diagonal pronunciada para clases 1 y 5, y mayor dispersión en clases intermedias.}
+\label{fig:confusion_matrix}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/all_confusion_matrices.png}
+\caption{Matrices de confusión de todos los mejores modelos. Se observa un patrón consistente: las clases extremas (1 y 5 estrellas) son clasificadas con mayor precisión, mientras que las clases intermedias presentan mayor confusión.}
+\label{fig:all_confusion_matrices}
+\end{figure}
+
+% ============================================================================
+% 5. CONCLUSIONES
+% ============================================================================
+\section{Conclusiones}
+
+\subsection{Hallazgos Principales}
+
+Este proyecto permitió obtener las siguientes conclusiones:
+
+\begin{enumerate}
+    \item \textbf{Superioridad de modelos secuenciales:} Los modelos que capturan la estructura secuencial del texto (RNN, LSTM, GRU, Transformer) superan consistentemente a los modelos que ignoran el orden de las palabras (MLP con BoW). Esto confirma la importancia del contexto secuencial para el análisis de sentimientos.
+    
+    \item \textbf{Equivalencia práctica entre LSTM y GRU:} Ambas arquitecturas alcanzaron resultados similares ($\sim$62\% accuracy), siendo GRU más eficiente computacionalmente. Para este tipo de tarea, GRU representa una excelente relación costo-beneficio.
+    
+    \item \textbf{Transformer competitivo pero costoso:} El Transformer Encoder alcanzó resultados comparables a LSTM/GRU (61.3\% vs. 62\%), pero con un costo computacional significativamente mayor. Su ventaja de paralelización no se traduce en mejor rendimiento para este tamaño de dataset.
+    
+    \item \textbf{Desafío de clases intermedias:} Todos los modelos mostraron dificultad para distinguir las clases 2, 3 y 4 estrellas. Esto sugiere que la ambigüedad inherente en opiniones moderadas es un límite fundamental que no se resuelve solo con arquitecturas más complejas.
+    
+    \item \textbf{Embeddings aprendidos vs. preentrenados:} Los embeddings GloVe no mejoraron el rendimiento del Transformer, indicando que con 200,000 ejemplos de entrenamiento el modelo puede aprender representaciones específicas del dominio tan efectivas como las preentrenadas.
+\end{enumerate}
+
+\subsection{Limitaciones del Estudio}
+
+\begin{itemize}
+    \item Se trabajó únicamente con texto en inglés; el comportamiento podría variar en otros idiomas.
+    \item No se exploraron técnicas de data augmentation ni modelos de lenguaje grandes (BERT, RoBERTa).
+    \item El límite de 62\% de accuracy podría estar relacionado con la calidad intrínseca del etiquetado (ruido en las etiquetas).
+\end{itemize}
+
+\subsection{Trabajo Futuro}
+
+\begin{itemize}
+    \item \textbf{Fine-tuning de modelos preentrenados:} Explorar BERT, RoBERTa o DistilBERT con fine-tuning para potencialmente superar el límite actual de 62\%.
+    \item \textbf{Reformulación del problema:} Convertir la clasificación de 5 clases en una tarea de regresión o en clasificación binaria (positivo/negativo) podría mejorar los resultados.
+    \item \textbf{Análisis multimodal:} Incorporar información adicional como el título del producto, categoría o características del revisor.
+    \item \textbf{Análisis de atención:} Utilizar los pesos de atención del Transformer para interpretar qué partes del texto influyen más en la clasificación.
+\end{itemize}
+
+% ============================================================================
+% REFERENCIAS
+% ============================================================================
+
+\begin{thebibliography}{3}
+
+\bibitem{amazon_reviews}
+Keung, P., Lu, Y., Szarvas, G., \& Smith, N. A. (2020).
+The Multilingual Amazon Reviews Corpus.
+\textit{Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)}, pp. 4563-4568.
+\url{https://aclanthology.org/2020.emnlp-main.369/}
+
+\bibitem{pytorch}
+Paszke, A., et al. (2019).
+PyTorch: An Imperative Style, High-Performance Deep Learning Library.
+\textit{Advances in Neural Information Processing Systems 32}, pp. 8024-8035.
+\url{https://pytorch.org/}
+
+\bibitem{tensorflow}
+Abadi, M., et al. (2016).
+TensorFlow: A System for Large-Scale Machine Learning.
+\textit{12th USENIX Symposium on Operating Systems Design and Implementation (OSDI 16)}, pp. 265-283.
+\url{https://www.tensorflow.org/}
+
+\end{thebibliography}
+
+\end{document}
