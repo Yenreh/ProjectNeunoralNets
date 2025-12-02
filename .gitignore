@@ -219,6 +219,8 @@ output/*
 !output/project_part_3/experiment_history.json
 !output/project_part_4/experiment_history.json
 
+# Figures
+report/figures/*
 # Extra Data
 extra_data
 
