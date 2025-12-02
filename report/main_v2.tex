@@ -75,7 +75,7 @@
 % RESUMEN
 % ============================================================================
 \begin{abstract}
-Este proyecto analiza el desempeño de cinco familias de arquitecturas de redes neuronales para clasificación de sentimientos en reseñas de productos de Amazon. Se trabajó con un subconjunto balanceado de 200,000 reseñas en inglés, clasificadas en cinco categorías (1 a 5 estrellas). Se implementaron y evaluaron modelos de Perceptrón Multicapa (MLP) con representaciones Bag-of-Words y Embeddings, redes recurrentes simples (SimpleRNN), redes con memoria (LSTM y GRU bidireccionales), y modelos basados en la arquitectura Transformer Encoder. Los experimentos se realizaron en PyTorch y TensorFlow utilizando GPUs NVIDIA. Los resultados muestran que los modelos secuenciales (GRU: 62.0\%, LSTM: 61.7\%) superan significativamente a los MLP (50-59\%), mientras que el Transformer alcanzó un 61.3\% de accuracy. Todos los modelos presentaron mayor dificultad para clasificar las clases intermedias (2-4 estrellas), logrando mejor precisión en las clases extremas (1 y 5 estrellas). El proyecto demuestra la importancia de capturar la estructura secuencial del texto para tareas de análisis de sentimientos.
+Este proyecto analiza el desempeño de cinco familias de arquitecturas de redes neuronales para clasificación de sentimientos en reseñas de productos de Amazon. Se trabajó con un subconjunto balanceado de 200,000 reseñas en inglés, clasificadas en cinco categorías (1 a 5 estrellas). Se implementaron y evaluaron modelos de Perceptrón Multicapa (MLP) con representaciones Bag-of-Words y Embeddings, redes recurrentes simples (SimpleRNN), redes con memoria (LSTM y GRU bidireccionales), y modelos basados en la arquitectura Transformer Encoder. Los experimentos se realizaron en PyTorch y TensorFlow utilizando GPUs NVIDIA. Los resultados muestran que los modelos secuenciales (GRU: 61.98\%, LSTM: 61.72\%) superan significativamente a los MLP (53--59\%), mientras que el Transformer alcanzó un 61.32\% de accuracy. Todos los modelos presentaron mayor dificultad para clasificar las clases intermedias (2-4 estrellas), logrando mejor precisión en las clases extremas (1 y 5 estrellas). El proyecto demuestra la importancia de capturar la estructura secuencial del texto para tareas de análisis de sentimientos.
 \end{abstract}
 
 \newpage
@@ -376,7 +376,7 @@ MLP\_Emb\_PT\_20251128 & 58.9\% & 0.587 & 95s & val\_loss \\
 \end{tabular}
 \end{table}
 
-El modelo MLP con BoW alcanzó aproximadamente 50--53\% de accuracy, limitado por la pérdida de información secuencial inherente a la representación BoW. El uso de embeddings mejoró significativamente el rendimiento ($\sim$59\%), ya que permite capturar relaciones semánticas entre palabras.
+El modelo MLP con BoW alcanzó 50--53\% de accuracy, limitado por la pérdida de información secuencial inherente a la representación BoW. El uso de embeddings mejoró significativamente el rendimiento ($\sim$59\%), ya que permite capturar relaciones semánticas entre palabras.
 
 \begin{figure}[H]
 \centering
@@ -442,8 +442,8 @@ GRU\_PT\_20251128\_212324 & \textbf{62.0\%} & 0.614 & 15 & 13.8 min & val\_loss 
 
 Los resultados muestran que:
 \begin{itemize}
-    \item SimpleRNN alcanzó 60\% de accuracy, superando a los MLP pero mostrando cierta inestabilidad en el entrenamiento debido a problemas de vanishing gradients.
-    \item LSTM y GRU obtuvieron resultados similares ($\sim$61--62\%), siendo GRU ligeramente más eficiente computacionalmente (menos parámetros y menor tiempo de entrenamiento).
+    \item SimpleRNN alcanzó 59.98\% de accuracy, superando a los MLP pero mostrando cierta inestabilidad en el entrenamiento debido a problemas de vanishing gradients.
+    \item LSTM y GRU obtuvieron resultados similares (61.72\% y 61.98\% respectivamente), siendo GRU ligeramente más eficiente computacionalmente (menos parámetros y menor tiempo de entrenamiento).
     \item La bidireccionalidad resultó crucial, permitiendo al modelo considerar tanto el contexto anterior como el posterior de cada token.
 \end{itemize}
 
@@ -669,9 +669,9 @@ Este proyecto permitió obtener las siguientes conclusiones:
 \begin{enumerate}
     \item \textbf{Superioridad de modelos secuenciales:} Los modelos que capturan la estructura secuencial del texto (RNN, LSTM, GRU, Transformer) superan consistentemente a los modelos que ignoran el orden de las palabras (MLP con BoW). Esto confirma la importancia del contexto secuencial para el análisis de sentimientos.
     
-    \item \textbf{Equivalencia práctica entre LSTM y GRU:} Ambas arquitecturas alcanzaron resultados similares ($\sim$62\% accuracy), siendo GRU más eficiente computacionalmente. Para este tipo de tarea, GRU representa una excelente relación costo-beneficio.
+    \item \textbf{Equivalencia práctica entre LSTM y GRU:} Ambas arquitecturas alcanzaron resultados similares (61.72\% y 61.98\% accuracy respectivamente), siendo GRU más eficiente computacionalmente. Para este tipo de tarea, GRU representa una excelente relación costo-beneficio.
     
-    \item \textbf{Transformer competitivo pero costoso:} El Transformer Encoder alcanzó resultados comparables a LSTM/GRU (61.3\% vs. 62\%), pero con un costo computacional significativamente mayor. Su ventaja de paralelización no se traduce en mejor rendimiento para este tamaño de dataset.
+    \item \textbf{Transformer competitivo pero costoso:} El Transformer Encoder alcanzó resultados comparables a LSTM/GRU (61.32\% vs. 61.98\%), pero con un costo computacional significativamente mayor. Su ventaja de paralelización no se traduce en mejor rendimiento para este tamaño de dataset.
     
     \item \textbf{Desafío de clases intermedias:} Todos los modelos mostraron dificultad para distinguir las clases 2, 3 y 4 estrellas. Esto sugiere que la ambigüedad inherente en opiniones moderadas es un límite fundamental que no se resuelve solo con arquitecturas más complejas.
     
@@ -683,13 +683,13 @@ Este proyecto permitió obtener las siguientes conclusiones:
 \begin{itemize}
     \item Se trabajó únicamente con texto en inglés; el comportamiento podría variar en otros idiomas.
     \item No se exploraron técnicas de data augmentation ni modelos de lenguaje grandes (BERT, RoBERTa).
-    \item El límite de 62\% de accuracy podría estar relacionado con la calidad intrínseca del etiquetado (ruido en las etiquetas).
+    \item El límite de $\sim$62\% de accuracy podría estar relacionado con la calidad intrínseca del etiquetado (ruido en las etiquetas).
 \end{itemize}
 
 \subsection{Trabajo Futuro}
 
 \begin{itemize}
-    \item \textbf{Fine-tuning de modelos preentrenados:} Explorar BERT, RoBERTa o DistilBERT con fine-tuning para potencialmente superar el límite actual de 62\%.
+    \item \textbf{Fine-tuning de modelos preentrenados:} Explorar BERT, RoBERTa o DistilBERT con fine-tuning para potencialmente superar el límite actual de $\sim$62\%.
     \item \textbf{Reformulación del problema:} Convertir la clasificación de 5 clases en una tarea de regresión o en clasificación binaria (positivo/negativo) podría mejorar los resultados.
     \item \textbf{Análisis multimodal:} Incorporar información adicional como el título del producto, categoría o características del revisor.
     \item \textbf{Análisis de atención:} Utilizar los pesos de atención del Transformer para interpretar qué partes del texto influyen más en la clasificación.
