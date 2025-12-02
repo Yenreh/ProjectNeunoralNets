@@ -1,7 +1,7 @@
 {
   "experiments": [
     {
-      "experiment_name": "MLP_BoW",
+      "experiment_name": "MLP_BoW_TensorFlow_20250929_014458",
       "configuration": {
         "model_type": "MLP_BoW",
         "text_column": "review_body",
@@ -113,7 +113,7 @@
         },
         "epochs_trained": 11,
         "training_time": 33.343684,
-        "model_path": "models/project_part_1/MLP_BoW_20250929_014458.h5",
+        "model_path": "models/project_part_1/MLP_BoW_TensorFlow_20250929_014458.h5",
         "final_train_loss": 0.4599952697753906,
         "final_val_loss": 1.710358738899231,
         "final_train_accuracy": 0.8244850039482117,
@@ -183,7 +183,7 @@
       "experiment_id": 1
     },
     {
-      "experiment_name": "MultiLayer_Perceptron (Embedding)",
+      "experiment_name": "MLP_Embedding_TensorFlow_20250929_014649",
       "configuration": {
         "model_type": "MLP Embedding",
         "text_column": "review_body",
@@ -410,7 +410,7 @@
         },
         "epochs_trained": 34,
         "training_time": 289.286516,
-        "model_path": "models/project_part_1/MLP Embedding_20250929_014649.h5",
+        "model_path": "models/project_part_1/MLP_Embedding_TensorFlow_20250929_014649.h5",
         "final_train_loss": 0.8180462718009949,
         "final_val_loss": 0.9800991415977478,
         "final_train_accuracy": 0.6523450016975403,
@@ -480,7 +480,7 @@
       "experiment_id": 2
     },
     {
-      "experiment_name": "MLP_PyTorch_Embedding",
+      "experiment_name": "MLP_Embedding_PyTorch_20251128_144320",
       "configuration": {
         "model_type": "MLP_Embedding_Torch",
         "framework": "pytorch",
@@ -732,7 +732,7 @@
       "experiment_id": 3
     },
     {
-      "experiment_name": "MLP_PyTorch_BoW",
+      "experiment_name": "MLP_PyTorch_BoW_20251128_144615",
       "configuration": {
         "model_type": "MLP_BoW_Torch",
         "framework": "pytorch",
@@ -897,7 +897,7 @@
       "experiment_id": 4
     },
     {
-      "experiment_name": "MLP_PyTorch_BoW",
+      "experiment_name": "MLP_PyTorch_BoW_20251130_135449",
       "configuration": {
         "model_type": "MLP_BoW_Torch",
         "framework": "pytorch",
@@ -1093,7 +1093,7 @@
       "experiment_id": 5
     },
     {
-      "experiment_name": "MLP_PyTorch_Embedding",
+      "experiment_name": "MLP_PyTorch_Embedding_20251130_135607",
       "configuration": {
         "model_type": "MLP_Embedding_Torch",
         "framework": "pytorch",
